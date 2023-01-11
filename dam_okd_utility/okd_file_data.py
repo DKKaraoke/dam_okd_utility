@@ -94,5 +94,5 @@ class OkaHeader(NamedTuple):
 
 
 class OkdGenericChunk(NamedTuple):
-    id: bytes
+    chunk_id: bytes
     data: bytes

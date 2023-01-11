@@ -39,9 +39,10 @@ def main(argv=None):
             chunk_buffer = chunks_stream.read(chunk_size)
             chunk = OkdFile.read_chunk(chunk_buffer)
             if isinstance(chunk, OkdGenericChunk):
-                print(f'Unknown chunk found. chunk_id={chunk.id}')
+                print(
+                    f'Unknown chunk found. chunk_id={chunk.chunk_id}, chunk_id_hex={chunk.chunk_id.hex()}')
                 output_path = os.path.join(
-                    args.output_path, 'chunk_' + chunk.id.hex() + '.bin')
+                    args.output_path, 'chunk_' + chunk.chunk_id.hex() + '.bin')
                 with open(output_path, 'wb') as output_file:
                     output_file.write(chunk.data)
             elif isinstance(chunk, OkdAdpcmChunk):
