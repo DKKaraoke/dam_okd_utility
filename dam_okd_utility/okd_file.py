@@ -5,6 +5,7 @@ import os
 from dam_okd_utility.customized_logger import getLogger
 from dam_okd_utility.okd_file_data import GenericOkdHeader, MmtOkdHeader, MmkOkdHeader, SprOkdHeader, DioOkdHeader, OkdHeader, OkaHeader, OkdGenericChunk
 from dam_okd_utility.okd_adpcm_chunk import OkdAdpcmChunk
+from dam_okd_utility.okd_m_track_chunk import OkdMTrackChunk
 from dam_okd_utility.okd_p_track_info_chunk import OkdPTrackInfoChunk
 
 
@@ -377,6 +378,8 @@ class OkdFile:
         if chunk_id == b'YPTI':
             return OkdPTrackInfoChunk.read(
                 chunk_data_stream)
+        elif chunk_id[0:3] == b'\xffMR':
+            return OkdMTrackChunk.read(chunk_data_stream)
         elif chunk_id == b'YADD':
             return OkdAdpcmChunk.read(chunk_data_stream)
 
