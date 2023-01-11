@@ -40,12 +40,14 @@ def main(argv=None):
             chunk = OkdFile.read_chunk(chunk_buffer)
             if isinstance(chunk, OkdGenericChunk):
                 print(f'Unknown chunk found. chunk_id={chunk.id}')
-                output_path = os.path.join(args.output_path, 'chunk_' + chunk.id.hex() + '.bin')
+                output_path = os.path.join(
+                    args.output_path, 'chunk_' + chunk.id.hex() + '.bin')
                 with open(output_path, 'wb') as output_file:
                     output_file.write(chunk.data)
             elif isinstance(chunk, OkdAdpcmChunk):
                 for index, adpcm in enumerate(chunk.adpcms):
-                    output_path = os.path.join(args.output_path, 'adpcm_' + str(index) + '.bin')
+                    output_path = os.path.join(
+                        args.output_path, 'adpcm_' + str(index) + '.bin')
                     with open(output_path, 'wb') as output_file:
                         output_file.write(adpcm)
             else:

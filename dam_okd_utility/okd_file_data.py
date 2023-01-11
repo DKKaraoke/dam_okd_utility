@@ -92,6 +92,7 @@ class OkaHeader(NamedTuple):
     reserved: int
     crc_loader: int
 
+
 class OkdGenericChunk(NamedTuple):
     id: bytes
     data: bytes

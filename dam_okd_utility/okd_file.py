@@ -334,7 +334,7 @@ class OkdFile:
 
         # Decrypt
         OkdFile.__decrypt(input_stream, chunks_stream,
-                             encryption_key_index, encrypted_length)
+                          encryption_key_index, encrypted_length)
         # Copy extended data
         chunks_stream.write(input_stream.read())
 

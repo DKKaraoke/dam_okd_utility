@@ -3,6 +3,7 @@ from typing import NamedTuple
 
 from dam_okd_utility.customized_logger import getLogger
 
+
 class OkdAdpcmChunk(NamedTuple):
     """DAM OKD ADPCM Chunk
     """
