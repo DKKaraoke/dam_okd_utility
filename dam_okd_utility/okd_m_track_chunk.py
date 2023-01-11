@@ -9,7 +9,6 @@ class OkdMTrackMessage(NamedTuple):
     """DAM OKD M-Track Message
     """
 
-    message_id: int
     time: int
     data: bytes
 
@@ -53,35 +52,34 @@ class OkdMTrackChunk(NamedTuple):
                 break
             message_id = message_id_buffer[0]
             if message_id & 0x80 == 0x80:
-                data_buffer = b''
+                data_buffer = message_id_buffer
                 if message_id == 0xf1:
-                    data_buffer = stream.read(2)
-                    if len(data_buffer) != 2:
+                    data_buffer += stream.read(2)
+                    if len(data_buffer) != 3:
                         raise RuntimeError('Invalid data_buffer length.')
                 elif message_id == 0xf2:
-                    data_buffer = stream.read(1)
-                    if len(data_buffer) != 1:
+                    data_buffer += stream.read(1)
+                    if len(data_buffer) != 2:
                         raise RuntimeError('Invalid data_buffer length.')
                 elif message_id == 0xf3:
-                    data_buffer = stream.read(1)
-                    if len(data_buffer) != 1:
+                    data_buffer += stream.read(1)
+                    if len(data_buffer) != 2:
                         raise RuntimeError('Invalid data_buffer length.')
                 elif message_id == 0xf4:
-                    data_buffer = stream.read(1)
-                    if len(data_buffer) != 1:
+                    data_buffer += stream.read(1)
+                    if len(data_buffer) != 2:
                         raise RuntimeError('Invalid data_buffer length.')
                 elif message_id == 0xf5:
                     pass
                 elif message_id == 0xf6:
-                    data_buffer = stream.read(1)
-                    if len(data_buffer) != 1:
+                    data_buffer += stream.read(1)
+                    if len(data_buffer) != 2:
                         raise RuntimeError('Invalid data_buffer length.')
                 elif message_id == 0xf8:
-                    data_buffer = stream.read(1)
-                    if len(data_buffer) != 1:
+                    data_buffer += stream.read(1)
+                    if len(data_buffer) != 2:
                         raise RuntimeError('Invalid data_buffer length.')
                 elif message_id == 0xff:
-                    data_buffer = b''
                     while True:
                         current_byte_buffer = stream.read(1)
                         if len(current_byte_buffer) != 1:
@@ -92,7 +90,6 @@ class OkdMTrackChunk(NamedTuple):
                             break
                         data_buffer += current_byte_buffer
                 else:
-                    data_buffer = b''
                     while True:
                         current_byte_buffer = stream.read(1)
                         if len(current_byte_buffer) != 1:
@@ -102,8 +99,7 @@ class OkdMTrackChunk(NamedTuple):
                             stream.seek(-1, os.SEEK_CUR)
                             break
                         data_buffer += current_byte_buffer
-                messages.append(OkdMTrackMessage(
-                    message_id, time, data_buffer))
+                messages.append(OkdMTrackMessage(time, data_buffer))
             else:
                 duration = OkdMTrackChunk.__read_duration(stream)
                 if duration is None:
