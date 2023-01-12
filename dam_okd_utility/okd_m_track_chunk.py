@@ -1,16 +1,25 @@
 import io
 import os
-from typing import NamedTuple
+from typing import NamedTuple, Union
 
 from dam_okd_utility.customized_logger import getLogger
 
 
-class OkdMTrackMessage(NamedTuple):
-    """DAM OKD M-Track Message
+class OkdMTrackGenericMessage(NamedTuple):
+    """DAM OKD M-Track Generic Message
     """
 
-    time: int
     data: bytes
+
+
+class OkdMTrackDurationMessage(NamedTuple):
+    """DAM OKD M-Track Duration Message
+    """
+
+    duration: int
+
+
+OkdMTrackMessage = Union[OkdMTrackGenericMessage, OkdMTrackDurationMessage]
 
 
 class OkdMTrackChunk(NamedTuple):
@@ -25,6 +34,9 @@ class OkdMTrackChunk(NamedTuple):
         if len(byte_1_buffer) != 1:
             return
         byte_1 = byte_1_buffer[0]
+        if byte_1 & 0x80 == 0x80:
+            stream.seek(-1, os.SEEK_CUR)
+            return
         if byte_1 < 0x40:
             return byte_1
         byte_2_buffer = stream.read(1)
@@ -42,15 +54,16 @@ class OkdMTrackChunk(NamedTuple):
         raise RuntimeError('Failed to read duration.')
 
     @staticmethod
-    def read(stream: io.BufferedReader):
+    def __read_chunk(stream: io.BufferedReader):
         messages: list[OkdMTrackMessage] = []
 
-        time = 0
         while True:
             message_id_buffer = stream.read(1)
             if len(message_id_buffer) != 1:
-                break
+                return
             message_id = message_id_buffer[0]
+            if message_id == 0x00:
+                break
             if message_id & 0x80 == 0x80:
                 data_buffer = message_id_buffer
                 if message_id == 0xf1:
@@ -99,12 +112,31 @@ class OkdMTrackChunk(NamedTuple):
                             stream.seek(-1, os.SEEK_CUR)
                             break
                         data_buffer += current_byte_buffer
-                messages.append(OkdMTrackMessage(time, data_buffer))
+                messages.append(OkdMTrackGenericMessage(data_buffer))
             else:
                 duration = OkdMTrackChunk.__read_duration(stream)
                 if duration is None:
                     break
-                time += duration
+                messages.append(OkdMTrackDurationMessage(duration))
+
+        return messages
+
+    @staticmethod
+    def read(stream: io.BufferedReader):
+        messages: list[OkdMTrackMessage] = []
+
+        while True:
+            chunk = OkdMTrackChunk.__read_chunk(stream)
+            if chunk is None:
+                break
+            messages.extend(chunk)
+
+            end_of_track_buffer = stream.read(3)
+            if len(end_of_track_buffer) != 3:
+                raise RuntimeError('Invalid end_of_track_buffer length.')
+            if end_of_track_buffer == b'\x00\x00\x00':
+                break
+            stream.seek(-3, os.SEEK_CUR)
 
         return OkdMTrackChunk(messages)
 
