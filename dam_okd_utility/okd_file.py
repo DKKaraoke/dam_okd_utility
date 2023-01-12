@@ -320,8 +320,10 @@ class OkdFile:
         extended_data_offset: int
         if isinstance(header, OkdHeader):
             extended_data_offset = header.adpcm_offset
-        else:
+        elif isinstance(header, OkaHeader):
             extended_data_offset = header.data_offset
+        else:
+            raise RuntimeError('Unknown header detected.')
         if extended_data_offset != 0:
             extended_data_offset -= 40
 
