@@ -366,7 +366,20 @@ class OkdFile:
         return index
 
     @staticmethod
-    def read_chunk(buffer: bytes):
+    def parse_generic_chunk(buffer: bytes):
+        if len(buffer) < 8:
+            raise RuntimeError('Invalid buffer length.')
+
+        chunk_id = buffer[0:4]
+        chunk_size = int.from_bytes(buffer[4:8], byteorder='big')
+        chunk_data = buffer[8:]
+        if len(chunk_data) < chunk_size:
+            raise RuntimeError('Invalid chunk_data length.')
+
+        return OkdGenericChunk(chunk_id, chunk_data)
+
+    @staticmethod
+    def parse_chunk(buffer: bytes):
         if len(buffer) < 8:
             raise RuntimeError('Invalid buffer length.')
 
