@@ -7,6 +7,7 @@ import os
 
 from dam_okd_utility.okd_file import OkdFile, OkdFileType
 from dam_okd_utility.okd_file_data import OkdGenericChunk
+from dam_okd_utility.okd_p_track_chunk import OkdPTrackChunk
 from dam_okd_utility.okd_adpcm_chunk import OkdAdpcmChunk
 
 
@@ -48,10 +49,11 @@ def main(argv=None):
             if isinstance(chunk, OkdGenericChunk):
                 print(
                     f'Unknown chunk found. chunk_id={chunk.chunk_id}, chunk_id_hex={chunk.chunk_id.hex()}')
+            elif isinstance(chunk, OkdPTrackChunk):
                 output_path = os.path.join(
-                    args.output_path, 'chunk_' + chunk.chunk_id.hex() + '.bin')
-                with open(output_path, 'wb') as output_file:
-                    output_file.write(chunk.data)
+                    args.output_path, 'p_track_' + str(chunk_buffer[3]) + '.mid')
+                midi = chunk.to_midi()
+                midi.save(output_path)
             elif isinstance(chunk, OkdAdpcmChunk):
                 for index, adpcm in enumerate(chunk.adpcms):
                     output_path = os.path.join(
