@@ -1,9 +1,9 @@
-import io
+import bitstring
 import mido
 from typing import NamedTuple
 
 from dam_okd_utility.customized_logger import getLogger
-from dam_okd_utility.okd_midi import OkdMidiDeltaTime, OkdMidiGenericEvent, OkdMidiMessage
+from dam_okd_utility.okd_midi import OkdMidiGenericEvent
 from dam_okd_utility.okd_p_track_midi import OkdPTrackMidi
 
 
@@ -14,81 +14,61 @@ class OkdPTrackChunk(NamedTuple):
     __logger = getLogger('OkdPTrackChunk')
 
     @staticmethod
-    def read(stream: io.BufferedReader):
-        messages = OkdPTrackMidi.read(stream)
-        return OkdPTrackChunk(messages)
+    def read(stream: bitstring.BitStream):
+        track = OkdPTrackMidi.read(stream)
+        return OkdPTrackChunk(track)
 
     def to_midi(self):
-        midi = mido.MidiFile()
+        absolute_track: list[tuple[int, mido.Message]] = []
+        for message in self.track:
+            status_byte = message.data[0]
+            status_type = status_byte & 0xf0
 
-        for _ in range(16):
-            midi_track = mido.MidiTrack()
-            midi.tracks.append(midi_track)
-
-        delta_time = 0
-        while True:
             try:
-                message = self.messages.pop(0)
-            except IndexError:
-                break
-            if isinstance(message, OkdMidiGenericEvent):
-                status = message.data[0]
-                status_type = status & 0xf0
-                if 0xf0 <= status:
-                    continue
-                try:
-                    mido.messages.specs.SPEC_BY_STATUS[status]
-                except KeyError:
-                    raise RuntimeError(
-                        f'Invalid message detected. status={hex(status)}')
-                channel = status & 0x0f
+                mido.messages.specs.SPEC_BY_STATUS[status_byte]
+            except KeyError:
+                OkdPTrackChunk.__logger.warning(
+                    f'Unknown message detected. status_byte={hex(status_byte)}')
+                continue
+            channel = status_byte & 0x0f
 
-                midi_message: mido.Message
-                if status_type == 0x80 or status_type == 0x90:
-                    note_number: int
-                    note_on_velocity: int
-                    note_off_velocity: int
-                    if status_type == 0x80:
-                        note_number = message.data[1]
-                        note_on_velocity = message.data[2]
-                        note_off_velocity = message.data[3]
-                        pass
-                    elif status_type == 0x90:
-                        note_number = message.data[1]
-                        note_on_velocity = message.data[2]
-                        note_off_velocity = 64
-                        pass
-                    else:
-                        raise RuntimeError('Invalid status_type.')
+            # Allow note_off, note_on, pitch_bend
+            if status_type != 0x80 and status_type != 0x90 and status_type != 0xe0:
+                continue
 
-                    delta_time_message: OkdMidiMessage
-                    try:
-                        delta_time_message = self.messages.pop(0)
-                    except IndexError:
-                        raise RuntimeError('Invalid message sequence.')
-                    if not isinstance(delta_time_message, OkdMidiDeltaTime):
-                        raise RuntimeError('Invalid message sequence.')
+            if status_type == 0xc0:
+                program_number = message.data[1]
+                midi_message = mido.Message(
+                    'program_change', channel=channel, program=program_number)
+                absolute_track.append(
+                    (message.absolute_tick, midi_message))
+                continue
 
-                    midi_message = mido.Message(
-                        'note_on', channel=channel, note=note_number, velocity=note_on_velocity, time=delta_time)
-                    midi.tracks[channel].append(midi_message)
-                    midi_message = mido.Message(
-                        'note_off', channel=channel, note=note_number, velocity=note_off_velocity, time=delta_time_message.tick)
-                    midi.tracks[channel].append(midi_message)
+            if status_type == 0xa0:
+                velocity = message.data[1]
+                midi_message = mido.Message(
+                    'polytouch', note=0, channel=channel, value=velocity)
+                absolute_track.append(
+                    (message.absolute_tick, midi_message))
+                continue
+
+            midi_message = mido.Message.from_bytes(message.data)
+            absolute_track.append((message.absolute_tick, midi_message))
+
+        absolute_track.sort(key=lambda message: message[0])
+
+        midi = mido.MidiFile()
+        for channel in range(16):
+            track = mido.MidiTrack()
+            current_time = 0
+            for absolute_time, event in absolute_track:
+                if event.channel != channel:
                     continue
-                elif status_type == 0xa0:
-                    velocity = message.data[1]
-                    midi_message = mido.Message(
-                        'polytouch', note=0, value=velocity)
-                    midi_message.channel = channel
-                else:
-                    continue
-                midi.tracks[channel].append(midi_message)
-            elif isinstance(message, OkdMidiDeltaTime):
-                delta_time = message.tick
-            else:
-                raise RuntimeError('Unknown message detected.')
+                event.time = absolute_time - current_time
+                track.append(event)
+                current_time = absolute_time
+            midi.tracks.append(track)
 
         return midi
 
-    messages: list[OkdMidiMessage]
+    track: list[OkdMidiGenericEvent]

@@ -14,17 +14,16 @@ class OkdAdpcmChunk(NamedTuple):
     def read(stream: bitstring.BitStream):
         adpcms: list[bytes] = []
         while True:
-            chunk_header_buffer = stream.read(8)
-            if len(chunk_header_buffer) < 8:
+            chunk_id: bytes
+            try:
+                chunk_id = stream.read('bytes:4')
+            except bitstring.ReadError:
                 break
-            chunk_id = chunk_header_buffer[0:4]
+
             if chunk_id != b'YAWV':
                 raise RuntimeError('Invalid chunk_id.')
-            chunk_size = int.from_bytes(
-                chunk_header_buffer[4:8], byteorder='big')
-            chunk_data = stream.read(chunk_size)
-            if len(chunk_data) < chunk_size:
-                raise RuntimeError('Invalid chunk_data length.')
+            chunk_size: int = stream.read('uintbe:32')
+            chunk_data: bytes = stream.read(8 * chunk_size).bytes
             adpcms.append(chunk_data)
 
         return OkdAdpcmChunk(adpcms)
