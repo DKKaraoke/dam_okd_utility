@@ -66,6 +66,7 @@ class OkdPTrackMidi:
                     channel = status_byte & 0x0f
                     note_number = event_data_buffer[1]
                     note_on_velocity = event_data_buffer[2]
+                    note_off_velocity = event_data_buffer[3]
                     note_on_buffer = bytearray(3)
                     note_on_buffer[0] = 0x90 | channel
                     note_on_buffer[1] = note_number
@@ -75,8 +76,12 @@ class OkdPTrackMidi:
 
                     delta_time = read_delta_time(stream)
 
+                    note_off_buffer = bytearray(3)
+                    note_on_buffer[0] = 0x80 | channel
+                    note_on_buffer[1] = note_number
+                    note_on_buffer[2] = note_off_velocity
                     messages.append(
-                        OkdMidiGenericEvent(event_data_buffer, absolute_time + delta_time))
+                        OkdMidiGenericEvent(bytes(note_off_buffer), absolute_time + delta_time))
                     continue
                 elif status_type == 0x90:
                     event_data_buffer = status_byte.to_bytes(
@@ -149,8 +154,8 @@ class OkdPTrackMidi:
 
         absolute_time = 0
         while True:
-            end_of_track_buffer: bytes = stream.peek('bytes:4')
-            if end_of_track_buffer == b'\x00\x00\x00\x00':
+            end_of_track_buffer: bytes = stream.peek('bytes:3')
+            if end_of_track_buffer == b'\x00\x00\x00':
                 break
 
             chunk = OkdPTrackMidi.__read_chunk(stream, absolute_time)
