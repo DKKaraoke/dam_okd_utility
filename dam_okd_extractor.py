@@ -6,7 +6,6 @@ import io
 import os
 
 from dam_okd_utility.okd_file import OkdFile, OkdFileType
-from dam_okd_utility.okd_file_data import OkdGenericChunk
 from dam_okd_utility.okd_p_track_chunk import OkdPTrackChunk
 from dam_okd_utility.okd_adpcm_chunk import OkdAdpcmChunk
 
