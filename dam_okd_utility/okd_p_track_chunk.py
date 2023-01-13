@@ -52,7 +52,12 @@ class OkdPTrackChunk(NamedTuple):
                     (message.absolute_tick, midi_message))
                 continue
 
-            midi_message = mido.Message.from_bytes(message.data)
+            midi_message: mido.Message
+            try:
+                midi_message = mido.Message.from_bytes(message.data)
+            except ValueError:
+                OkdPTrackChunk.__logger.warning(f'Invalid message data. status_byte={status_byte}')
+                continue
             absolute_track.append((message.absolute_tick, midi_message))
 
         absolute_track.sort(key=lambda message: message[0])

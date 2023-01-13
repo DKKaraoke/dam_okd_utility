@@ -146,10 +146,10 @@ class OkdPTrackMidi:
         track: list[OkdMidiGenericEvent] = []
 
         stream.pos = stream.length - 32
-        end_of_track_buffer: bytes = stream.peek('bytes:4')
+        end_of_track_buffer: bytes = stream.read('bytes:4')
         if end_of_track_buffer != b'\x00\x00\x00\x00':
             OkdPTrackMidi.__logger.warning('End of track not found.')
-            return track
+            stream.append(b'\x00\x00\x00\x00\x00\x00\x00')
         stream.pos = 0
 
         absolute_time = 0
