@@ -140,12 +140,17 @@ class OkdPTrackMidi:
     def read(stream: bitstring.BitStream):
         track: list[OkdMidiGenericEvent] = []
 
+        stream.pos = stream.length - 32
+        end_of_track_buffer: bytes = stream.peek('bytes:4')
+        if end_of_track_buffer != b'\x00\x00\x00\x00':
+            OkdPTrackMidi.__logger.warning('End of track not found.')
+            return track
+        stream.pos = 0
+
         absolute_time = 0
         while True:
-            end_of_tracks_buffer: bytes = stream.peek('bytes:4')
-            if len(end_of_tracks_buffer) != 4:
-                raise RuntimeError('Invalid end_of_track_buffer length.')
-            if end_of_tracks_buffer == b'\x00\x00\x00\x00':
+            end_of_track_buffer: bytes = stream.peek('bytes:4')
+            if end_of_track_buffer == b'\x00\x00\x00\x00':
                 break
 
             chunk = OkdPTrackMidi.__read_chunk(stream, absolute_time)
