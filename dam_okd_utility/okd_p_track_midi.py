@@ -123,16 +123,16 @@ class OkdPTrackMidi:
                     else:
                         data_length = 1
                 else:
-                    OkdPTrackMidi.__logger.warning(f'Unknown message detected. status_byte={hex(status_byte)}')
+                    OkdPTrackMidi.__logger.warning(
+                        f'Unknown message detected. status_byte={hex(status_byte)}')
 
                 status_buffer = status_byte.to_bytes(1, byteorder='big')
                 data_buffer = stream.read(8 * data_length).bytes
 
                 duration = 0
-                if status_type == 0x80:
+                if status_type == 0x80 or status_type == 0x90:
                     duration = read_variable_int(stream) << 2
-                if status_type == 0x90:
-                    duration = read_variable_int(stream) << 2
+
                 track.append(OkdMidiGenericMessage(
                     delta_time, status_buffer + data_buffer, duration))
         except bitstring.ReadError:
