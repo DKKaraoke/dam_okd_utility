@@ -16,6 +16,8 @@ class OkdPTrackChunk(NamedTuple):
     @staticmethod
     def read(stream: bitstring.BitStream):
         track = OkdPTrackMidi.read(stream)
+        for message in track:
+            print('MSG:', message.data.hex())
         return OkdPTrackChunk(track)
 
     def to_midi(self):
@@ -27,24 +29,81 @@ class OkdPTrackChunk(NamedTuple):
                 continue
 
             status_byte = message.data[0]
+            status_type = status_byte & 0xf0
+            channel = status_byte & 0x0f
+
+            if status_type == 0xa0:
+                # CC: Expression
+                message_data_bytearray = bytearray(3)
+                message_data_bytearray[0] = 0xb0 | channel
+                message_data_bytearray[1] = 0x0b
+                message_data_bytearray[2] = message.data[1]
+                midi_message = mido.Message.from_bytes(
+                    bytes(message_data_bytearray))
+                raw_track.append((absolute_time, midi_message))
+                continue
+
+            if status_type == 0xb0:
+                # 0xBX to CC: 0x03 for research
+                message_data_bytearray = bytearray(3)
+                message_data_bytearray[0] = 0xb0 | channel
+                message_data_bytearray[1] = 0x03
+                message_data_bytearray[2] = message.data[1]
+                midi_message = mido.Message.from_bytes(
+                    bytes(message_data_bytearray))
+                raw_track.append((absolute_time, midi_message))
+                continue
+
+            if status_type == 0xc0:
+                # CC: Modulation
+                message_data_bytearray = bytearray(3)
+                message_data_bytearray[0] = 0xb0 | channel
+                message_data_bytearray[1] = 0x01
+                message_data_bytearray[2] = message.data[1]
+                midi_message = mido.Message.from_bytes(
+                    bytes(message_data_bytearray))
+                raw_track.append((absolute_time, midi_message))
+                continue
+
+            if status_byte == 0xf4:
+                # F4 to CC: 0x09 for research
+                message_data_bytearray = bytearray(3)
+                message_data_bytearray[0] = 0xb0 | channel
+                message_data_bytearray[1] = 0x09
+                # message_data_bytearray[2] = message.data[1]
+                midi_message = mido.Message.from_bytes(
+                    bytes(message_data_bytearray))
+                raw_track.append((absolute_time, midi_message))
+                continue
+
+            if status_byte == 0xfd:
+                # FD to CC: 0x0E for research
+                message_data_bytearray = bytearray(3)
+                message_data_bytearray[0] = 0xb0 | channel
+                message_data_bytearray[1] = 0x0e
+                # message_data_bytearray[2] = message.data[1]
+                midi_message = mido.Message.from_bytes(
+                    bytes(message_data_bytearray))
+                raw_track.append((absolute_time, midi_message))
+                continue
+
+            if status_byte == 0xfe:
+                # FE to CC: 0x0F for research
+                message_data_bytearray = bytearray(3)
+                message_data_bytearray[0] = 0xb0 | channel
+                message_data_bytearray[1] = 0x0f
+                message_data_bytearray[2] = message.data[1]
+                midi_message = mido.Message.from_bytes(
+                    bytes(message_data_bytearray))
+                raw_track.append((absolute_time, midi_message))
+                continue
+
             try:
                 mido.messages.specs.SPEC_BY_STATUS[status_byte]
             except KeyError:
                 OkdPTrackChunk.__logger.warning(
                     f'Unknown message detected. status_byte={hex(status_byte)}')
                 continue
-
-            status_type = status_byte & 0xf0
-            # # Allow note_off, note_on, pitch_bend
-            # if status_type != 0x80 and status_type != 0x90 and status_type != 0xe0:
-            #     continue
-
-            if status_type == 0xa0:
-                message_data_bytearray = bytearray(3)
-                message_data_bytearray[0] = status_byte
-                message_data_bytearray[1] = 0x00
-                message_data_bytearray[2] = message.data[1]
-                message = OkdMidiGenericMessage(message.delta_time, message_data_bytearray, message.duration)
 
             midi_message: mido.Message
             try:
