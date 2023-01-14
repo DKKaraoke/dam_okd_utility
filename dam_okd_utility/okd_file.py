@@ -308,6 +308,14 @@ class OkdFile:
 
     @staticmethod
     def decrypt(input_stream: io.BufferedReader, chunks_stream: io.BufferedWriter, file_type: OkdFileType):
+        # Detect and skip SPR header
+        sprc_header_buffer = input_stream.read(4)
+        if sprc_header_buffer == b'SPRC':
+            OkdFile.__logger.info('SPR hedaer detected.')
+            input_stream.seek(16)
+        else:
+            input_stream.seek(0)
+
         start_position = input_stream.tell()
 
         encryption_key_index = OkdFile.__detect_first_encryption_key_index(
@@ -374,7 +382,7 @@ class OkdFile:
         chunk_id = buffer[0:4]
         chunk_size = int.from_bytes(buffer[4:8], byteorder='big')
         chunk_data = buffer[8:]
-        if len(chunk_data) < chunk_size:
+        if len(chunk_data) != chunk_size:
             raise RuntimeError('Invalid chunk_data length.')
 
         return OkdGenericChunk(chunk_id, chunk_data)
@@ -387,7 +395,7 @@ class OkdFile:
         chunk_id = buffer[0:4]
         chunk_size = int.from_bytes(buffer[4:8], byteorder='big')
         chunk_data = buffer[8:]
-        if len(chunk_data) < chunk_size:
+        if len(chunk_data) != chunk_size:
             raise RuntimeError('Invalid chunk_data length.')
         chunk_data_stream = bitstring.BitStream(chunk_data)
 

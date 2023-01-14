@@ -20,12 +20,6 @@ def main(argv=None):
     args = parser.parse_args()
 
     with open(args.input_path, 'rb') as input_file:
-        header = input_file.read(4)
-        if header == b'SPRC':
-            input_file.seek(16)
-        else:
-            input_file.seek(0)
-
         chunks_stream = io.BytesIO()
         okd_header = OkdFile.decrypt(
             input_file, chunks_stream, OkdFileType.OKD)
