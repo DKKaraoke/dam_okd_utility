@@ -64,75 +64,79 @@ class OkdPTrackMidi:
     def read(stream: bitstring.BitStream):
         track: list[OkdMidiMessage] = []
 
-        while True:
-            delta_time: int
-            try:
-                delta_time = read_extended_variable_int(stream)
-            except bitstring.ReadError:
-                break
+        try:
+            while True:
+                delta_time: int
+                try:
+                    delta_time = read_extended_variable_int(stream)
+                except bitstring.ReadError:
+                    break
 
-            status_byte = read_status_byte(stream)
-            status_type = status_byte & 0xf0
+                status_byte = read_status_byte(stream)
+                status_type = status_byte & 0xf0
 
-            data_length = 0
-            if status_type == 0x80:
-                data_length = 3
-            elif status_type == 0x90:
-                data_length = 2
-            elif status_type == 0xa0:
-                data_length = 1
-            elif status_type == 0xb0:
-                data_length = 2
-            elif status_type == 0xc0:
-                data_length = 1
-            elif status_type == 0xd0:
-                data_length = 1
-            elif status_type == 0xe0:
-                data_length = 2
-            elif status_byte == 0xf0 or status_byte == 0xf9:
-                start_position = stream.bytepos
-                unterminated_sysex_detected = False
-                while True:
-                    byte = stream.read('uint:8')
-                    if byte & 0x80 == 0x80:
-                        if byte != 0xf7:
-                            OkdPTrackMidi.__logger.warning(
-                                f'Unterminated SysEx message detected. stop_byte={hex(byte)}')
-                            unterminated_sysex_detected = True
-                        data_length = stream.bytepos - start_position
-                        stream.bytepos = start_position
-                        break
-                if unterminated_sysex_detected:
-                    continue
-                stream.bytepos = start_position
-            elif status_byte == 0xf8:
-                data_length = 3
-            elif status_byte == 0xf9:
-                data_length = 1
-            elif status_byte == 0xfa:
-                data_length = 1
-            elif status_byte == 0xfd:
                 data_length = 0
-            elif status_byte == 0xfe:
-                byte = stream.peek('uint:8')
-                if byte & 0xf0 == 0xa0:
-                    data_length = 4
-                elif byte & 0xf0 == 0xc0:
+                if status_type == 0x80:
                     data_length = 3
-                else:
+                elif status_type == 0x90:
+                    data_length = 2
+                elif status_type == 0xa0:
                     data_length = 1
-            else:
-                OkdPTrackMidi.__logger.warning(f'Unknown message detected. status_byte={hex(status_byte)}')
+                elif status_type == 0xb0:
+                    data_length = 2
+                elif status_type == 0xc0:
+                    data_length = 1
+                elif status_type == 0xd0:
+                    data_length = 1
+                elif status_type == 0xe0:
+                    data_length = 2
+                elif status_byte == 0xf0 or status_byte == 0xf9:
+                    start_position = stream.bytepos
+                    unterminated_sysex_detected = False
+                    while True:
+                        byte = stream.read('uint:8')
+                        if byte & 0x80 == 0x80:
+                            if byte != 0xf7:
+                                OkdPTrackMidi.__logger.warning(
+                                    f'Unterminated SysEx message detected. stop_byte={hex(byte)}')
+                                unterminated_sysex_detected = True
+                            data_length = stream.bytepos - start_position
+                            stream.bytepos = start_position
+                            break
+                    if unterminated_sysex_detected:
+                        continue
+                    stream.bytepos = start_position
+                elif status_byte == 0xf8:
+                    data_length = 3
+                elif status_byte == 0xf9:
+                    data_length = 1
+                elif status_byte == 0xfa:
+                    data_length = 1
+                elif status_byte == 0xfd:
+                    data_length = 0
+                elif status_byte == 0xfe:
+                    byte = stream.peek('uint:8')
+                    if byte & 0xf0 == 0xa0:
+                        data_length = 4
+                    elif byte & 0xf0 == 0xc0:
+                        data_length = 3
+                    else:
+                        data_length = 1
+                else:
+                    OkdPTrackMidi.__logger.warning(f'Unknown message detected. status_byte={hex(status_byte)}')
 
-            status_buffer = status_byte.to_bytes(1, byteorder='big')
-            data_buffer = stream.read(8 * data_length).bytes
+                status_buffer = status_byte.to_bytes(1, byteorder='big')
+                data_buffer = stream.read(8 * data_length).bytes
 
-            duration = 0
-            if status_type == 0x80:
-                duration = read_variable_int(stream)
-            if status_type == 0x90:
-                duration = read_variable_int(stream) << 2
-            track.append(OkdMidiGenericMessage(
-                delta_time, status_buffer + data_buffer, duration))
+                duration = 0
+                if status_type == 0x80:
+                    duration = read_variable_int(stream)
+                if status_type == 0x90:
+                    duration = read_variable_int(stream) << 2
+                track.append(OkdMidiGenericMessage(
+                    delta_time, status_buffer + data_buffer, duration))
+        except bitstring.ReadError:
+            OkdPTrackMidi.__logger.warning(f'Reached to end of stream.')
+            pass
 
         return track
