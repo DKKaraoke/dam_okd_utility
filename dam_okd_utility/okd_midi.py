@@ -1,37 +1,80 @@
 import bitstring
-from typing import NamedTuple
+from typing import NamedTuple, Union
 
 from dam_okd_utility.customized_logger import getLogger
 
 __logger = getLogger('OkdMidi')
 
-def read_delta_time(stream: bitstring.BitStream):
-    byte_1: int = stream.read('uint:8')
-    if byte_1 < 0x40:
-        return byte_1
-    byte_2: int = stream.read('uint:8')
-    if byte_2 < 0x40:
-        return byte_2 * 0x40 + byte_1
-    byte_3: int = stream.read('uint:8')
-    if byte_3 < 0x40:
-        return byte_3 * 0x1000 + byte_2 * 0x40 + byte_1
 
-    __logger.warning('Failed to read delta time.')
+def read_status_byte(stream: bitstring.BitStream):
+    byte: int = stream.read('uint:8')
+    if byte & 0x80 != 0x80:
+        raise ValueError('Invalid status byte.')
+    return byte
 
-def read_extended_delta_time(stream: bitstring.BitStream):
+
+def peek_status_byte(stream: bitstring.BitStream):
+    byte: int = stream.peek('uint:8')
+    if byte & 0x80 != 0x80:
+        raise ValueError('Invalid status byte.')
+    return byte
+
+
+def read_data_byte(stream: bitstring.BitStream):
+    byte: int = stream.read('uint:8')
+    if byte & 0x80 == 0x80:
+        raise ValueError('Invalid data byte.')
+    return byte
+
+
+def peek_data_byte(stream: bitstring.BitStream):
+    byte: int = stream.peek('uint:8')
+    if byte & 0x80 == 0x80:
+        raise ValueError('Invalid data byte.')
+    return byte
+
+
+def read_variable_int(stream: bitstring.BitStream):
+    value = 0
+    for i in range(3):
+        byte: int = read_data_byte(stream)
+        value = (byte << (i * 6)) + value
+        if byte & 0x40 != 0x40:
+            return value
+
+    raise ValueError('Invalid byte sequence.')
+
+
+def read_extended_variable_int(stream: bitstring.BitStream):
     total_duration = 0
     while True:
-        first_byte: int = stream.peek('uint:8')
-        if first_byte & 0x80 == 0x80 or first_byte == 0x00:
+        first_byte: int
+        try:
+            first_byte = peek_data_byte(stream)
+        except ValueError:
             break
+        # if first_byte == 0x00:
+        #     break
 
-        delta_time = read_delta_time(stream)
-        if delta_time is None:
-            break
-        total_duration += delta_time
+        total_duration += read_variable_int(stream)
 
     return total_duration
 
-class OkdMidiGenericEvent(NamedTuple):
+
+# class OkdMidiGenericEvent(NamedTuple):
+#     data: bytes
+#     absolute_tick: int
+
+# class OkdMidiDeltaTime(NamedTuple):
+#     tick: int
+
+
+class OkdMidiGenericMessage(NamedTuple):
+    delta_time: int
     data: bytes
-    absolute_tick: int
+    duration: int
+
+
+OkdMidiMessage = OkdMidiGenericMessage
+
+# OkdMidiMessage = Union[OkdMidiDeltaTime, OkdMidiGenericMessage]
