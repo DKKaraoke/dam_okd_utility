@@ -34,10 +34,17 @@ class OkdPTrackChunk(NamedTuple):
                     f'Unknown message detected. status_byte={hex(status_byte)}')
                 continue
 
-            # status_type = status_byte & 0xf0
+            status_type = status_byte & 0xf0
             # # Allow note_off, note_on, pitch_bend
             # if status_type != 0x80 and status_type != 0x90 and status_type != 0xe0:
             #     continue
+
+            if status_type == 0xa0:
+                message_data_bytearray = bytearray(3)
+                message_data_bytearray[0] = status_byte
+                message_data_bytearray[1] = 0x00
+                message_data_bytearray[2] = message.data[1]
+                message = OkdMidiGenericMessage(message.delta_time, message_data_bytearray, message.duration)
 
             midi_message: mido.Message
             try:
