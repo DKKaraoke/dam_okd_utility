@@ -309,8 +309,8 @@ class OkdFile:
     @staticmethod
     def decrypt(input_stream: io.BufferedReader, chunks_stream: io.BufferedWriter, file_type: OkdFileType):
         # Detect and skip SPR header
-        sprc_header_buffer = input_stream.read(4)
-        if sprc_header_buffer == b'SPRC':
+        spr_header_buffer = input_stream.read(4)
+        if spr_header_buffer == b'SPRC':
             OkdFile.__logger.info('SPR hedaer detected.')
             input_stream.seek(16)
         else:
