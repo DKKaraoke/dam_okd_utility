@@ -137,6 +137,7 @@ class OkdPTrackMidi:
                     delta_time, status_buffer + data_buffer, duration))
         except bitstring.ReadError:
             OkdPTrackMidi.__logger.warning(f'Reached to end of stream.')
+            # Ignore irregular
             pass
 
         return track
