@@ -130,7 +130,7 @@ class OkdPTrackMidi:
 
                 duration = 0
                 if status_type == 0x80:
-                    duration = read_variable_int(stream)
+                    duration = read_variable_int(stream) << 2
                 if status_type == 0x90:
                     duration = read_variable_int(stream) << 2
                 track.append(OkdMidiGenericMessage(
