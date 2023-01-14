@@ -1,6 +1,9 @@
 import bitstring
 from typing import NamedTuple
 
+from dam_okd_utility.customized_logger import getLogger
+
+__logger = getLogger('OkdMidi')
 
 def read_delta_time(stream: bitstring.BitStream):
     byte_1: int = stream.read('uint:8')
@@ -13,7 +16,7 @@ def read_delta_time(stream: bitstring.BitStream):
     if byte_3 < 0x40:
         return byte_3 * 0x1000 + byte_2 * 0x40 + byte_1
 
-    raise RuntimeError('Failed to read duration.')
+    __logger.warning('Failed to read delta time.')
 
 def read_extended_delta_time(stream: bitstring.BitStream):
     total_duration = 0
@@ -22,7 +25,10 @@ def read_extended_delta_time(stream: bitstring.BitStream):
         if first_byte & 0x80 == 0x80 or first_byte == 0x00:
             break
 
-        total_duration += read_delta_time(stream)
+        delta_time = read_delta_time(stream)
+        if delta_time is None:
+            break
+        total_duration += delta_time
 
     return total_duration
 
