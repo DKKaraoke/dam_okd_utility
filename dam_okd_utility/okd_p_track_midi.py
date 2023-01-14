@@ -65,15 +65,6 @@ class OkdPTrackMidi:
         track: list[OkdMidiMessage] = []
 
         while True:
-            # end_of_track: bytes
-            # try:
-            #     end_of_track = stream.peek('bytes:4')
-            # except bitstring.ReadError:
-            #     break
-            # if end_of_track == b'\x00\x00\x00\x00':
-            #     break
-            # print(end_of_track.hex())
-
             delta_time: int
             try:
                 delta_time = read_extended_variable_int(stream)
@@ -108,10 +99,8 @@ class OkdPTrackMidi:
                             OkdPTrackMidi.__logger.warning(
                                 f'Unterminated SysEx message detected. stop_byte={hex(byte)}')
                             unterminated_sysex_detected = True
-                        #     raise RuntimeError(
-                        #         'Unterminated SysEx message detected.')
                         data_length = stream.bytepos - start_position
-                        # stream.bytepos = start_position
+                        stream.bytepos = start_position
                         break
                 if unterminated_sysex_detected:
                     continue
@@ -133,9 +122,7 @@ class OkdPTrackMidi:
                 else:
                     data_length = 1
             else:
-                # OkdPTrackMidi.__logger.warning(f'Unknown message detected. status_byte={hex(status_byte)}')
-                raise ValueError(
-                    f'Unknown message detected. status_byte={hex(status_byte)}')
+                OkdPTrackMidi.__logger.warning(f'Unknown message detected. status_byte={hex(status_byte)}')
 
             status_buffer = status_byte.to_bytes(1, byteorder='big')
             data_buffer = stream.read(8 * data_length).bytes
