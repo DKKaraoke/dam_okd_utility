@@ -30,7 +30,8 @@ class OkdPTrackInfoEntry(NamedTuple):
 
     @staticmethod
     def read(stream: bitstring.BitStream):
-        track_number: int = stream.read('uintle:16')
+        track_number: int = stream.read('uint:8')
+        track_status: int = stream.read('uint:8')
         use_channel_group_flag: int = stream.read('uintbe:16')
 
         single_channel_groups: list[int] = []
@@ -39,7 +40,7 @@ class OkdPTrackInfoEntry(NamedTuple):
                 single_channel_group: int = stream.read('uintbe:16')
                 single_channel_groups.append(single_channel_group)
             else:
-                single_channel_groups.append(0x0001 << channel)
+                single_channel_groups.append(0x0000)
 
         channel_groups: list[int] = []
         for channel in range(16):
@@ -52,9 +53,10 @@ class OkdPTrackInfoEntry(NamedTuple):
 
         system_ex_port: int = stream.read('uintle:16')
 
-        return OkdPTrackInfoEntry(track_number, single_channel_groups, channel_groups, channel_info, system_ex_port)
+        return OkdPTrackInfoEntry(track_number, track_status, single_channel_groups, channel_groups, channel_info, system_ex_port)
 
     track_number: int
+    track_status: int
     single_channel_groups: list[int]
     channel_groups: list[int]
     channel_info: list[OkdPTrackInfoChannelInfoEntry]

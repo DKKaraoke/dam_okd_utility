@@ -74,6 +74,8 @@ class OkdExtendedPTrackInfoChunk(NamedTuple):
 
     @staticmethod
     def read(stream: bitstring.BitStream):
+        # Skip unknown
+        stream.bytepos += 10
         extended_p_track_info: list[OkdExtendedPTrackInfoEntry] = []
         entry_count = stream.read('uintbe:16')
         for _ in range(entry_count):

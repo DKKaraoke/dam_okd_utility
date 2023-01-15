@@ -28,9 +28,7 @@ def main(argv=None):
         print(f'Header found. header={okd_header}')
         chunks_stream.seek(0)
 
-        p_track_info_entries: list[OkdPTrackInfoEntry |
-                                   OkdExtendedPTrackInfoEntry] = []
-        p_track_index = 0
+        p_track_info_entries: list[OkdPTrackInfoEntry] | list[OkdExtendedPTrackInfoEntry] | None = None
 
         chunk_index = OkdFile.index_chunk(chunks_stream)
         chunks_stream.seek(0)
@@ -59,19 +57,28 @@ def main(argv=None):
             print(f'{type(chunk).__name__} found. chunk_id={generic_chunk.chunk_id}, chunk_id_hex={generic_chunk.chunk_id.hex()}')
 
             if isinstance(chunk, OkdPTrackInfoChunk):
-                p_track_info_entries.extend(chunk.p_track_info)
-                print(chunk)
+                # Prioritize Extended P-Track Information
+                if p_track_info_entries is not None:
+                    continue
+
+                p_track_info_entries = chunk.p_track_info
             elif isinstance(chunk, OkdExtendedPTrackInfoChunk):
-                p_track_info_entries.extend(chunk.extended_p_track_info)
-                print(chunk)
+                p_track_info_entries = chunk.extended_p_track_info
             elif isinstance(chunk, OkdPTrackChunk):
                 track_number = chunk_buffer[3]
-                try:
-                    track_info_entry = p_track_info_entries[p_track_index]
-                except IndexError:
+
+                if p_track_info_entries is None:
+                    print('P-Track Information not found.')
+                    continue
+                track_info_entry: OkdPTrackInfoEntry | OkdExtendedPTrackInfoEntry | None = None
+                for entry in p_track_info_entries:
+                    if entry.track_number == track_number:
+                        track_info_entry = entry
+                        break
+                if track_info_entry is None:
                     print('P-Track Information Entry not found.')
                     continue
-                p_track_index += 1
+
                 output_path = os.path.join(
                     args.output_path, 'p_track_' + str(track_number) + '.mid')
                 midi = chunk.to_midi(track_info_entry)
