@@ -93,7 +93,7 @@ class OkdPTrackMidi:
                     # Modulation
                     data_length = 1
                 elif status_type == 0xd0:
-                    # ?
+                    # Channel pressure
                     data_length = 1
                 elif status_type == 0xe0:
                     # Pitch bend
