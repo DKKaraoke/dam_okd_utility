@@ -130,6 +130,8 @@ class OkdPTrackChunk(NamedTuple):
         midi = mido.MidiFile()
 
         setup_track = mido.MidiTrack()
+        setup_track.append(mido.MetaMessage(
+            'set_tempo', tempo=mido.bpm2tempo(125)))
         current_time = 0
         for absolute_time, message in raw_track:
             if hasattr(message, 'channel'):
