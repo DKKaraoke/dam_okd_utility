@@ -87,7 +87,7 @@ class OkdPTrackMidi:
                     # Expression
                     data_length = 1
                 elif status_type == 0xb0:
-                    # Pan?
+                    # Control change
                     data_length = 2
                 elif status_type == 0xc0:
                     # Modulation

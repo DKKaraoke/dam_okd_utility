@@ -43,26 +43,6 @@ class OkdPTrackChunk(NamedTuple):
                 raw_track.append((absolute_time, midi_message))
                 continue
 
-            if status_type == 0xb0:
-                # CC: Pan
-                # MSB
-                message_data_bytearray = bytearray(3)
-                message_data_bytearray[0] = 0xb0 | channel
-                message_data_bytearray[1] = 0x0a
-                message_data_bytearray[2] = message.data[1]
-                midi_message = mido.Message.from_bytes(
-                    bytes(message_data_bytearray))
-                raw_track.append((absolute_time, midi_message))
-                # LSB
-                message_data_bytearray = bytearray(3)
-                message_data_bytearray[0] = 0xb0 | channel
-                message_data_bytearray[1] = 0x2a
-                message_data_bytearray[2] = message.data[2]
-                midi_message = mido.Message.from_bytes(
-                    bytes(message_data_bytearray))
-                raw_track.append((absolute_time, midi_message))
-                continue
-
             if status_type == 0xc0:
                 # CC: Modulation
                 message_data_bytearray = bytearray(3)
