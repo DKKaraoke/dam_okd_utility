@@ -8,6 +8,7 @@ from dam_okd_utility.okd_file_data import GenericOkdHeader, MmtOkdHeader, MmkOkd
 from dam_okd_utility.okd_adpcm_chunk import OkdAdpcmChunk
 from dam_okd_utility.okd_p_track_chunk import OkdPTrackChunk
 from dam_okd_utility.okd_p_track_info_chunk import OkdPTrackInfoChunk
+from dam_okd_utility.okd_extended_p_track_info_chunk import OkdExtendedPTrackInfoChunk
 
 
 class OkdFileType(Enum):
@@ -401,6 +402,9 @@ class OkdFile:
 
         if chunk_id == b'YPTI':
             return OkdPTrackInfoChunk.read(
+                chunk_data_stream)
+        elif chunk_id == b'YPXI':
+            return OkdExtendedPTrackInfoChunk.read(
                 chunk_data_stream)
         elif chunk_id[0:3] == b'\xffPR':
             return OkdPTrackChunk.read(chunk_data_stream)
