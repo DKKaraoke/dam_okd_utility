@@ -1,7 +1,7 @@
 import bitstring
 
 from dam_okd_utility.customized_logger import getLogger
-from dam_okd_utility.okd_midi import read_status_byte, read_variable_int, read_extended_variable_int, OkdMidiGenericMessage, OkdMidiMessage
+from dam_okd_utility.okd_midi import read_status_byte, is_data_bytes, read_variable_int, read_extended_variable_int, OkdMidiGenericMessage, OkdMidiMessage
 
 
 class OkdPTrackMidi:
@@ -64,8 +64,8 @@ class OkdPTrackMidi:
     def read(stream: bitstring.BitStream):
         track: list[OkdMidiMessage] = []
 
-        try:
-            while True:
+        while True:
+            try:
                 end_of_track: bytes = stream.peek('bytes:4')
                 if end_of_track == b'\x00\x00\x00\x00':
                     break
@@ -137,6 +137,9 @@ class OkdPTrackMidi:
 
                 status_buffer = status_byte.to_bytes(1, byteorder='big')
                 data_buffer = stream.read(8 * data_length).bytes
+                if status_byte != 0xf0 and not is_data_bytes(data_buffer):
+                    OkdPTrackMidi.__logger.warning(f'Invalid data bytes detected. message_buffer={(status_buffer + data_buffer).hex()}')
+                    continue
 
                 duration = 0
                 if status_type == 0x80 or status_type == 0x90:
@@ -144,14 +147,15 @@ class OkdPTrackMidi:
 
                 track.append(OkdMidiGenericMessage(
                     delta_time, status_buffer + data_buffer, duration))
-        except bitstring.ReadError:
-            OkdPTrackMidi.__logger.warning(f'Reached to end of stream.')
-            # Ignore irregular
-            pass
-        except ValueError as e:
-            OkdPTrackMidi.__logger.warning(
-                f'Invalid value detected. error="{e}"')
-            # Ignore irregular
-            pass
+                    
+            except bitstring.ReadError:
+                OkdPTrackMidi.__logger.warning(f'Reached to end of stream.')
+                # Ignore irregular
+                break
+            except ValueError as e:
+                OkdPTrackMidi.__logger.warning(
+                    f'Invalid value detected. error="{e}"')
+                # Ignore irregular
+                pass
 
         return track

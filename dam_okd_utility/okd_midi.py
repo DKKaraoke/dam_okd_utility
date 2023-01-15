@@ -33,6 +33,12 @@ def peek_data_byte(stream: bitstring.BitStream):
         raise ValueError('Invalid data byte.')
     return byte
 
+def is_data_bytes(data: bytes):
+    for byte in data:
+        if byte & 0x80 == 0x80:
+            return False
+    return True        
+
 
 def read_variable_int(stream: bitstring.BitStream):
     value = 0
