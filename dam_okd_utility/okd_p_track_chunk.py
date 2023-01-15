@@ -44,18 +44,20 @@ class OkdPTrackChunk(NamedTuple):
                 continue
 
             if status_type == 0xb0:
-                # CC: Bank Select
+                # CC: Pan
+                # MSB
                 message_data_bytearray = bytearray(3)
                 message_data_bytearray[0] = 0xb0 | channel
-                message_data_bytearray[1] = 0x00
+                message_data_bytearray[1] = 0x0a
                 message_data_bytearray[2] = message.data[1]
                 midi_message = mido.Message.from_bytes(
                     bytes(message_data_bytearray))
                 raw_track.append((absolute_time, midi_message))
-                # Program Change
-                message_data_bytearray = bytearray(2)
-                message_data_bytearray[0] = 0xc0 | channel
-                message_data_bytearray[1] = message.data[2]
+                # LSB
+                message_data_bytearray = bytearray(3)
+                message_data_bytearray[0] = 0xb0 | channel
+                message_data_bytearray[1] = 0x2a
+                message_data_bytearray[2] = message.data[2]
                 midi_message = mido.Message.from_bytes(
                     bytes(message_data_bytearray))
                 raw_track.append((absolute_time, midi_message))
