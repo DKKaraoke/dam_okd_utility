@@ -8,6 +8,14 @@ class OkdPTrackInfoChannelInfoEntry(NamedTuple):
     """DAM OKD P-Track Information Channel Information Entry
     """
 
+    @staticmethod
+    def read(stream: bitstring.BitStream):
+        attribute: int = stream.read('uint:8')
+        port: int = stream.read('uint:8')
+        acchg_1: int = stream.read('uint:8')
+        acchg_2: int = stream.read('uint:8')
+        return OkdPTrackInfoChannelInfoEntry(attribute, port, acchg_1, acchg_2)
+
     attribute: int
     port: int
     acchg_1: int
@@ -22,35 +30,32 @@ class OkdPTrackInfoEntry(NamedTuple):
 
     @staticmethod
     def read(stream: bitstring.BitStream):
-        track_number = stream.read('uintle:16')
-        use_channel_group_flag = stream.read('uintbe:16')
+        track_number: int = stream.read('uintle:16')
+        use_channel_group_flag: int = stream.read('uintbe:16')
+
+        single_channel_groups: list[int] = []
+        for channel in range(16):
+            if (use_channel_group_flag >> channel) & 0x0001 == 0x0001:
+                single_channel_group: int = stream.read('uintbe:16')
+                single_channel_groups.append(single_channel_group)
+            else:
+                single_channel_groups.append(0x0001 << channel)
 
         channel_groups: list[int] = []
         for channel in range(16):
-            if (use_channel_group_flag >> channel) & 0x0001 == 0x0001:
-                channel_group = stream.read('uintbe:16')
-                channel_groups.append(channel_group)
-            else:
-                channel_groups.append(0x0001 << channel)
-
-        for channel in range(16):
-            channel_group = stream.read('uintbe:16')
+            channel_group: int = stream.read('uintbe:16')
             channel_groups.append(channel_group)
 
         channel_info: list[int] = []
         for channel in range(16):
-            channel_attribute = stream.read('uint:8')
-            channel_port = stream.read('uint:8')
-            channel_acchg_1 = stream.read('uint:8')
-            channel_acchg_2 = stream.read('uint:8')
-            channel_info.append(OkdPTrackInfoChannelInfoEntry(
-                channel_attribute, channel_port, channel_acchg_1, channel_acchg_2))
+            channel_info.append(OkdPTrackInfoChannelInfoEntry.read(stream))
 
-        system_ex_port = stream.read('uintle:16')
+        system_ex_port: int = stream.read('uintle:16')
 
-        return OkdPTrackInfoEntry(track_number, channel_groups, channel_info, system_ex_port)
+        return OkdPTrackInfoEntry(track_number, single_channel_groups, channel_groups, channel_info, system_ex_port)
 
     track_number: int
+    single_channel_groups: list[int]
     channel_groups: list[int]
     channel_info: list[OkdPTrackInfoChannelInfoEntry]
     system_ex_port: int
