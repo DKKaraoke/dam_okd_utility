@@ -66,30 +66,39 @@ class OkdPTrackMidi:
 
         try:
             while True:
-                delta_time: int
-                try:
-                    delta_time = read_extended_variable_int(stream)
-                except bitstring.ReadError:
+                end_of_track: bytes = stream.peek('bytes:4')
+                if end_of_track == b'\x00\x00\x00\x00':
                     break
+
+                delta_time = read_extended_variable_int(stream)
 
                 status_byte = read_status_byte(stream)
                 status_type = status_byte & 0xf0
 
                 data_length = 0
+                # Channel voice messages
                 if status_type == 0x80:
+                    # Note off
                     data_length = 3
                 elif status_type == 0x90:
+                    # Note on
                     data_length = 2
                 elif status_type == 0xa0:
+                    # Expression
                     data_length = 1
                 elif status_type == 0xb0:
+                    # Pan?
                     data_length = 2
                 elif status_type == 0xc0:
+                    # Modulation
                     data_length = 1
                 elif status_type == 0xd0:
+                    # ?
                     data_length = 1
                 elif status_type == 0xe0:
+                    # Pitch bend
                     data_length = 2
+                # System messages
                 elif status_byte == 0xf0 or status_byte == 0xf9:
                     start_position = stream.bytepos
                     unterminated_sysex_detected = False
