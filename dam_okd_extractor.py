@@ -30,6 +30,7 @@ def main(argv=None):
 
         p_track_info_entries: list[OkdPTrackInfoEntry |
                                    OkdExtendedPTrackInfoEntry] = []
+        p_track_index = 0
 
         chunk_index = OkdFile.index_chunk(chunks_stream)
         chunks_stream.seek(0)
@@ -66,10 +67,11 @@ def main(argv=None):
             elif isinstance(chunk, OkdPTrackChunk):
                 track_number = chunk_buffer[3]
                 try:
-                    track_info_entry = p_track_info_entries[track_number]
+                    track_info_entry = p_track_info_entries[p_track_index]
                 except IndexError:
                     print('P-Track Information Entry not found.')
                     continue
+                p_track_index += 1
                 output_path = os.path.join(
                     args.output_path, 'p_track_' + str(track_number) + '.mid')
                 midi = chunk.to_midi(track_info_entry)
