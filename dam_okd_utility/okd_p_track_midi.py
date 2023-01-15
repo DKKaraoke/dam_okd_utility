@@ -99,7 +99,7 @@ class OkdPTrackMidi:
                     # Pitch bend
                     data_length = 2
                 # System messages
-                elif status_byte == 0xf0 or status_byte == 0xf9:
+                elif status_byte == 0xf0:
                     start_position = stream.bytepos
                     unterminated_sysex_detected = False
                     while True:
