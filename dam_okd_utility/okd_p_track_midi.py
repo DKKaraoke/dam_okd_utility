@@ -139,5 +139,10 @@ class OkdPTrackMidi:
             OkdPTrackMidi.__logger.warning(f'Reached to end of stream.')
             # Ignore irregular
             pass
+        except ValueError as e:
+            OkdPTrackMidi.__logger.warning(
+                f'Invalid value detected. error="{e}"')
+            # Ignore irregular
+            pass
 
         return track
