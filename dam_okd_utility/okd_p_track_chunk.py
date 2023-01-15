@@ -44,11 +44,18 @@ class OkdPTrackChunk(NamedTuple):
                 continue
 
             if status_type == 0xb0:
-                # 0xBX to CC: 0x03 for research
+                # CC: Bank Select
                 message_data_bytearray = bytearray(3)
                 message_data_bytearray[0] = 0xb0 | channel
-                message_data_bytearray[1] = 0x03
+                message_data_bytearray[1] = 0x00
                 message_data_bytearray[2] = message.data[1]
+                midi_message = mido.Message.from_bytes(
+                    bytes(message_data_bytearray))
+                raw_track.append((absolute_time, midi_message))
+                # Program Change
+                message_data_bytearray = bytearray(2)
+                message_data_bytearray[0] = 0xc0 | channel
+                message_data_bytearray[1] = message.data[2]
                 midi_message = mido.Message.from_bytes(
                     bytes(message_data_bytearray))
                 raw_track.append((absolute_time, midi_message))
@@ -68,7 +75,7 @@ class OkdPTrackChunk(NamedTuple):
             if status_byte == 0xf4:
                 # F4 to CC: 0x09 for research
                 message_data_bytearray = bytearray(3)
-                message_data_bytearray[0] = 0xb0 | channel
+                message_data_bytearray[0] = 0xb0
                 message_data_bytearray[1] = 0x09
                 # message_data_bytearray[2] = message.data[1]
                 midi_message = mido.Message.from_bytes(
@@ -79,7 +86,7 @@ class OkdPTrackChunk(NamedTuple):
             if status_byte == 0xfd:
                 # FD to CC: 0x0E for research
                 message_data_bytearray = bytearray(3)
-                message_data_bytearray[0] = 0xb0 | channel
+                message_data_bytearray[0] = 0xb0
                 message_data_bytearray[1] = 0x0e
                 # message_data_bytearray[2] = message.data[1]
                 midi_message = mido.Message.from_bytes(
@@ -90,7 +97,7 @@ class OkdPTrackChunk(NamedTuple):
             if status_byte == 0xfe:
                 # FE to CC: 0x0F for research
                 message_data_bytearray = bytearray(3)
-                message_data_bytearray[0] = 0xb0 | channel
+                message_data_bytearray[0] = 0xb0
                 message_data_bytearray[1] = 0x0f
                 message_data_bytearray[2] = message.data[1]
                 midi_message = mido.Message.from_bytes(
