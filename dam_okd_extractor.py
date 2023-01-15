@@ -7,6 +7,8 @@ import os
 
 from dam_okd_utility.okd_file import OkdFile, OkdFileType
 from dam_okd_utility.okd_file import OkdGenericChunk
+from dam_okd_utility.okd_p_track_info_chunk import OkdPTrackInfoChunk
+from dam_okd_utility.okd_extended_p_track_info_chunk import OkdExtendedPTrackInfoChunk
 from dam_okd_utility.okd_p_track_chunk import OkdPTrackChunk
 from dam_okd_utility.okd_adpcm_chunk import OkdAdpcmChunk
 
@@ -26,6 +28,9 @@ def main(argv=None):
             input_file, chunks_stream, OkdFileType.OKD)
         print(f'Header found. header={okd_header}')
         chunks_stream.seek(0)
+
+        p_track_info: OkdPTrackInfoChunk | None = None
+        extended_p_track_info: OkdPTrackInfoChunk | None = None
 
         chunk_index = OkdFile.index_chunk(chunks_stream)
         chunks_stream.seek(0)
@@ -53,9 +58,10 @@ def main(argv=None):
             print(f'{type(chunk).__name__} found. chunk_id={generic_chunk.chunk_id}, chunk_id_hex={generic_chunk.chunk_id.hex()}')
 
             if isinstance(chunk, OkdPTrackChunk):
+                track_number = chunk_buffer[3]
                 output_path = os.path.join(
-                    args.output_path, 'p_track_' + str(chunk_buffer[3]) + '.mid')
-                midi = chunk.to_midi()
+                    args.output_path, 'p_track_' + str(track_number) + '.mid')
+                midi = chunk.to_midi(None)
                 midi.save(output_path)
             elif isinstance(chunk, OkdAdpcmChunk):
                 for index, adpcm in enumerate(chunk.adpcms):
