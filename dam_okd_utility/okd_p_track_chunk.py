@@ -74,22 +74,44 @@ class OkdPTrackChunk(NamedTuple):
                 raw_track.append((absolute_time, midi_message))
                 continue
 
-            if status_byte == 0xf4:
-                # F4 to CC: 0x09 for research
+            if status_byte == 0xf8:
+                # F8 to CC: 0x14(20) for research
                 message_data_bytearray = bytearray(3)
                 message_data_bytearray[0] = 0xb0
-                message_data_bytearray[1] = 0x09
-                # message_data_bytearray[2] = message.data[1]
+                message_data_bytearray[1] = 0x14
+                message_data_bytearray[2] = message.data[1]
+                midi_message = mido.Message.from_bytes(
+                    bytes(message_data_bytearray))
+                raw_track.append((absolute_time, midi_message))
+                continue
+
+            if status_byte == 0xf9:
+                # F9 to CC: 0x15(21) for research
+                message_data_bytearray = bytearray(3)
+                message_data_bytearray[0] = 0xb0
+                message_data_bytearray[1] = 0x15
+                message_data_bytearray[2] = message.data[1]
+                midi_message = mido.Message.from_bytes(
+                    bytes(message_data_bytearray))
+                raw_track.append((absolute_time, midi_message))
+                continue
+
+            if status_byte == 0xfa:
+                # FD to CC: 0x16(22) for research
+                message_data_bytearray = bytearray(3)
+                message_data_bytearray[0] = 0xb0
+                message_data_bytearray[1] = 0x16
+                message_data_bytearray[2] = message.data[1]
                 midi_message = mido.Message.from_bytes(
                     bytes(message_data_bytearray))
                 raw_track.append((absolute_time, midi_message))
                 continue
 
             if status_byte == 0xfd:
-                # FD to CC: 0x0E for research
+                # FD to CC: 0x17(23) for research
                 message_data_bytearray = bytearray(3)
                 message_data_bytearray[0] = 0xb0
-                message_data_bytearray[1] = 0x0e
+                message_data_bytearray[1] = 0x17
                 # message_data_bytearray[2] = message.data[1]
                 midi_message = mido.Message.from_bytes(
                     bytes(message_data_bytearray))
@@ -97,10 +119,10 @@ class OkdPTrackChunk(NamedTuple):
                 continue
 
             if status_byte == 0xfe:
-                # FE to CC: 0x0F for research
+                # FE to CC: 0x18(24) for research
                 message_data_bytearray = bytearray(3)
                 message_data_bytearray[0] = 0xb0
-                message_data_bytearray[1] = 0x0f
+                message_data_bytearray[1] = 0x18
                 message_data_bytearray[2] = message.data[1]
                 midi_message = mido.Message.from_bytes(
                     bytes(message_data_bytearray))
