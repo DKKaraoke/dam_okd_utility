@@ -61,7 +61,7 @@ def main(argv=None):
                 track_number = chunk_buffer[3]
                 output_path = os.path.join(
                     args.output_path, 'p_track_' + str(track_number) + '.mid')
-                midi = chunk.to_midi(None)
+                midi = chunk.to_midi()
                 midi.save(output_path)
             elif isinstance(chunk, OkdAdpcmChunk):
                 for index, adpcm in enumerate(chunk.adpcms):
