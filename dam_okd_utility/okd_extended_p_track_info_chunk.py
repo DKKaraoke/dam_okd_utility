@@ -13,15 +13,15 @@ class OkdExtendedPTrackInfoChannelInfoEntry(NamedTuple):
         attribute: int = stream.read('uintbe:16')
         port: int = stream.read('uintbe:16')
         reserved: int = stream.read('uintbe:16')
-        a_control: int = stream.read('uint:8')
-        c_control: int = stream.read('uint:8')
-        return OkdExtendedPTrackInfoChannelInfoEntry(attribute, port, reserved, a_control, c_control)
+        control_change_ax: int = stream.read('uint:8')
+        control_change_cx: int = stream.read('uint:8')
+        return OkdExtendedPTrackInfoChannelInfoEntry(attribute, port, reserved, control_change_ax, control_change_cx)
 
     attribute: int
     port: int
     reserved: int
-    a_control: int
-    c_control: int
+    control_change_ax: int
+    control_change_cx: int
 
 
 class OkdExtendedPTrackInfoEntry(NamedTuple):
@@ -52,7 +52,7 @@ class OkdExtendedPTrackInfoEntry(NamedTuple):
                 OkdExtendedPTrackInfoChannelInfoEntry.read(stream))
 
         system_ex_port: int = stream.read('uintle:16')
-        reserved_2: int = stream.read('uintbe:24')
+        reserved_2: int = stream.read('uintbe:16')
 
         return OkdExtendedPTrackInfoEntry(track_number, track_status, reserved_1, single_channel_groups, channel_groups, channel_info, system_ex_port, reserved_2)
 
@@ -79,7 +79,6 @@ class OkdExtendedPTrackInfoChunk(NamedTuple):
         for _ in range(entry_count):
             entry = OkdExtendedPTrackInfoEntry.read(stream)
             extended_p_track_info.append(entry)
-        print(stream.read('bytes').hex())
         return OkdExtendedPTrackInfoChunk(extended_p_track_info)
 
     extended_p_track_info: list[OkdExtendedPTrackInfoEntry]

@@ -12,14 +12,14 @@ class OkdPTrackInfoChannelInfoEntry(NamedTuple):
     def read(stream: bitstring.BitStream):
         attribute: int = stream.read('uint:8')
         port: int = stream.read('uint:8')
-        acchg_1: int = stream.read('uint:8')
-        acchg_2: int = stream.read('uint:8')
-        return OkdPTrackInfoChannelInfoEntry(attribute, port, acchg_1, acchg_2)
+        control_change_ax: int = stream.read('uint:8')
+        control_change_cx: int = stream.read('uint:8')
+        return OkdPTrackInfoChannelInfoEntry(attribute, port, control_change_ax, control_change_cx)
 
     attribute: int
     port: int
-    acchg_1: int
-    acchg_2: int
+    control_change_ax: int
+    control_change_cx: int
 
 
 class OkdPTrackInfoEntry(NamedTuple):

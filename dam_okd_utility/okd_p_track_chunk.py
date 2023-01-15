@@ -5,6 +5,8 @@ from typing import NamedTuple
 from dam_okd_utility.customized_logger import getLogger
 from dam_okd_utility.okd_midi import OkdMidiGenericMessage, OkdMidiMessage
 from dam_okd_utility.okd_p_track_midi import OkdPTrackMidi
+from dam_okd_utility.okd_p_track_info_chunk import OkdPTrackInfoEntry
+from dam_okd_utility.okd_extended_p_track_info_chunk import OkdExtendedPTrackInfoEntry
 
 
 class OkdPTrackChunk(NamedTuple):
@@ -16,11 +18,9 @@ class OkdPTrackChunk(NamedTuple):
     @staticmethod
     def read(stream: bitstring.BitStream):
         track = OkdPTrackMidi.read(stream)
-        for message in track:
-            print('MSG:', message.data.hex())
         return OkdPTrackChunk(track)
 
-    def to_midi(self):
+    def to_midi(self, track_info_entry: OkdPTrackInfoEntry | OkdExtendedPTrackInfoEntry):
         absolute_track = OkdPTrackMidi.to_absolute_track(self.track)
 
         raw_track: list[tuple[int, mido.Message]] = []
@@ -31,12 +31,13 @@ class OkdPTrackChunk(NamedTuple):
             status_byte = message.data[0]
             status_type = status_byte & 0xf0
             channel = status_byte & 0x0f
+            channel_info_entry = track_info_entry.channel_info[channel]
 
             if status_type == 0xa0:
-                # CC: Expression
+                # CC: channel_info_entry.control_change_ax
                 message_data_bytearray = bytearray(3)
                 message_data_bytearray[0] = 0xb0 | channel
-                message_data_bytearray[1] = 0x0b
+                message_data_bytearray[1] = channel_info_entry.control_change_ax
                 message_data_bytearray[2] = message.data[1]
                 midi_message = mido.Message.from_bytes(
                     bytes(message_data_bytearray))
@@ -44,10 +45,10 @@ class OkdPTrackChunk(NamedTuple):
                 continue
 
             if status_type == 0xc0:
-                # CC: Modulation
+                # CC: channel_info_entry.control_change_cx
                 message_data_bytearray = bytearray(3)
                 message_data_bytearray[0] = 0xb0 | channel
-                message_data_bytearray[1] = 0x01
+                message_data_bytearray[1] = channel_info_entry.control_change_cx
                 message_data_bytearray[2] = message.data[1]
                 midi_message = mido.Message.from_bytes(
                     bytes(message_data_bytearray))
