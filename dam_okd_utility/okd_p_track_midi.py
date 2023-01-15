@@ -138,7 +138,8 @@ class OkdPTrackMidi:
                 status_buffer = status_byte.to_bytes(1, byteorder='big')
                 data_buffer = stream.read(8 * data_length).bytes
                 if status_byte != 0xf0 and not is_data_bytes(data_buffer):
-                    OkdPTrackMidi.__logger.warning(f'Invalid data bytes detected. message_buffer={(status_buffer + data_buffer).hex()}')
+                    OkdPTrackMidi.__logger.warning(
+                        f'Invalid data bytes detected. message_buffer={(status_buffer + data_buffer).hex()}')
                     continue
 
                 duration = 0
@@ -147,10 +148,16 @@ class OkdPTrackMidi:
 
                 track.append(OkdMidiGenericMessage(
                     delta_time, status_buffer + data_buffer, duration))
-                    
+
             except bitstring.ReadError:
                 OkdPTrackMidi.__logger.warning(f'Reached to end of stream.')
                 # Ignore irregular
                 break
+
+            except ValueError as e:
+                OkdPTrackMidi.__logger.warning(
+                    f'Invalid value detected. error="{e}"')
+                # Ignore irregular
+                pass
 
         return track
