@@ -16,6 +16,7 @@ from dam_okd_utility.okd_file_data import (
     OkdGenericChunk,
 )
 from dam_okd_utility.okd_adpcm_chunk import OkdAdpcmChunk
+from dam_okd_utility.okd_m_track_chunk import OkdMTrackChunk
 from dam_okd_utility.okd_p_track_chunk import OkdPTrackChunk
 from dam_okd_utility.okd_p_track_info_chunk import OkdPTrackInfoChunk
 from dam_okd_utility.okd_extended_p_track_info_chunk import OkdExtendedPTrackInfoChunk
@@ -519,6 +520,8 @@ class OkdFile:
             return OkdPTrackInfoChunk.read(chunk_data_stream)
         elif chunk_id == b"YPXI":
             return OkdExtendedPTrackInfoChunk.read(chunk_data_stream)
+        elif chunk_id[0:3] == b"\xffMR":
+            return OkdMTrackChunk.read(chunk_data_stream)
         elif chunk_id[0:3] == b"\xffPR":
             return OkdPTrackChunk.read(chunk_data_stream)
         elif chunk_id == b"YADD":
