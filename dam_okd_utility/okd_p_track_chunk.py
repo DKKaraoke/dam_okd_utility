@@ -24,7 +24,11 @@ class OkdPTrackChunk(NamedTuple):
         return OkdPTrackChunk(track)
 
     def to_midi(
-        self, device: OkdPTrackMidiDevice, track_info_entry: OkdPTrackInfoEntry | OkdExtendedPTrackInfoEntry
+        self,
+        device: OkdPTrackMidiDevice,
+        track_info_entry: OkdPTrackInfoEntry | OkdExtendedPTrackInfoEntry,
+        part_number=0,
+        total_part_number=0,
     ):
         absolute_track = OkdPTrackMidi.to_absolute_track(self.track)
 
@@ -148,9 +152,25 @@ class OkdPTrackChunk(NamedTuple):
         for channel in range(16):
             track = mido.MidiTrack()
 
-            midi_parameter_change = device_state.midi_parameter_changes[channel + 1]
-            track.append(mido.Message('program_change', channel=channel, program=midi_parameter_change.program_number))
-            
+            track.append(
+                mido.MetaMessage(
+                    "midi_port",
+                    port=total_part_number,
+                )
+            )
+
+            midi_parameter_change_index = 16 * part_number + channel + 1
+            midi_parameter_change = device_state.midi_parameter_changes[
+                midi_parameter_change_index
+            ]
+            track.append(
+                mido.Message(
+                    "program_change",
+                    channel=channel,
+                    program=midi_parameter_change.program_number,
+                )
+            )
+
             current_time = 0
             for absolute_time, message in raw_track:
                 if not hasattr(message, "channel"):

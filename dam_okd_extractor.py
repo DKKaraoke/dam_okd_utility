@@ -3,6 +3,7 @@
 
 import argparse
 import io
+import mido
 import os
 import simplejson
 
@@ -34,9 +35,13 @@ def main(argv=None):
         chunks_stream.seek(0)
 
         p_track_midi_device = OkdPTrackMidiDevice()
+        p_track_part_number = 0
+        p_track_total_part_number = 0
         p_track_info_entries: list[OkdPTrackInfoEntry] | list[
             OkdExtendedPTrackInfoEntry
         ] | None = None
+
+        merged_midi = mido.MidiFile()
 
         chunk_index = OkdFile.index_chunk(chunks_stream)
         chunks_stream.seek(0)
@@ -96,6 +101,7 @@ def main(argv=None):
                 midi_device = OkdPTrackMidiDevice.load_from_sysex_messages(chunk.track)
                 if midi_device is not None:
                     p_track_midi_device = midi_device
+                    p_track_part_number = 0
 
                 track_number = chunk_buffer[3]
 
@@ -116,8 +122,17 @@ def main(argv=None):
                 output_path = os.path.join(
                     args.output_path, "p_track_" + str(track_number) + ".mid"
                 )
-                midi = chunk.to_midi(p_track_midi_device, track_info_entry)
+                midi = chunk.to_midi(
+                    p_track_midi_device,
+                    track_info_entry,
+                    p_track_part_number,
+                    p_track_total_part_number,
+                )
+                merged_midi.tracks.extend(midi.tracks)
                 midi.save(output_path)
+
+                p_track_part_number += 1
+                p_track_total_part_number += 1
             elif isinstance(chunk, OkdAdpcmChunk):
                 for index, adpcm in enumerate(chunk.adpcms):
                     output_path = os.path.join(
@@ -125,6 +140,9 @@ def main(argv=None):
                     )
                     with open(output_path, "wb") as output_file:
                         output_file.write(adpcm)
+
+        output_path = os.path.join(args.output_path, "p_track_merged.mid")
+        merged_midi.save(output_path)
 
 
 if __name__ == "__main__":
