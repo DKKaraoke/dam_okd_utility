@@ -55,25 +55,14 @@ def read_variable_int(stream: bitstring.BitStream):
 def read_extended_variable_int(stream: bitstring.BitStream):
     total_duration = 0
     while True:
-        first_byte: int
         try:
-            first_byte = peek_data_byte(stream)
+            peek_data_byte(stream)
         except ValueError:
             break
-        # if first_byte == 0x00:
-        #     break
 
         total_duration += read_variable_int(stream)
 
     return total_duration
-
-
-# class OkdMidiGenericEvent(NamedTuple):
-#     data: bytes
-#     absolute_tick: int
-
-# class OkdMidiDeltaTime(NamedTuple):
-#     tick: int
 
 
 class OkdMidiGenericMessage(NamedTuple):
@@ -82,6 +71,5 @@ class OkdMidiGenericMessage(NamedTuple):
     duration: int
 
 
+# OkdMidiMessage = Union[OkdMidiGenericMessage]
 OkdMidiMessage = OkdMidiGenericMessage
-
-# OkdMidiMessage = Union[OkdMidiDeltaTime, OkdMidiGenericMessage]
