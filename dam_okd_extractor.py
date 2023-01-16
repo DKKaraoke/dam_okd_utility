@@ -8,6 +8,7 @@ import simplejson
 
 from dam_okd_utility.okd_file import OkdFile, OkdFileType
 from dam_okd_utility.okd_file_data import OkdGenericChunk
+from dam_okd_utility.okd_p_track_midi_device import OkdPTrackMidiDevice
 from dam_okd_utility.okd_p_track_info_chunk import (
     OkdPTrackInfoEntry,
     OkdPTrackInfoChunk,
@@ -32,6 +33,7 @@ def main(argv=None):
         print(f"Header found. header={okd_header}")
         chunks_stream.seek(0)
 
+        p_track_midi_device = OkdPTrackMidiDevice()
         p_track_info_entries: list[OkdPTrackInfoEntry] | list[
             OkdExtendedPTrackInfoEntry
         ] | None = None
@@ -91,6 +93,10 @@ def main(argv=None):
 
                 p_track_info_entries = chunk.extended_p_track_info
             elif isinstance(chunk, OkdPTrackChunk):
+                midi_device = OkdPTrackMidiDevice.load_from_sysex_messages(chunk.track)
+                if midi_device is not None:
+                    p_track_midi_device = midi_device
+
                 track_number = chunk_buffer[3]
 
                 if p_track_info_entries is None:
@@ -110,7 +116,7 @@ def main(argv=None):
                 output_path = os.path.join(
                     args.output_path, "p_track_" + str(track_number) + ".mid"
                 )
-                midi = chunk.to_midi(track_info_entry)
+                midi = chunk.to_midi(p_track_midi_device, track_info_entry)
                 midi.save(output_path)
             elif isinstance(chunk, OkdAdpcmChunk):
                 for index, adpcm in enumerate(chunk.adpcms):
