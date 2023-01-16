@@ -3,6 +3,7 @@ import mido
 from typing import NamedTuple
 
 from dam_okd_utility.customized_logger import getLogger
+from dam_okd_utility.dump_memory import dump_memory
 from dam_okd_utility.okd_midi import OkdMidiGenericMessage, OkdMidiMessage
 from dam_okd_utility.okd_p_track_midi import OkdPTrackMidi
 from dam_okd_utility.okd_p_track_info_chunk import OkdPTrackInfoEntry
