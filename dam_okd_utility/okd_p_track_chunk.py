@@ -84,7 +84,7 @@ class OkdPTrackChunk(NamedTuple):
     #         program_number = message.data[7]
     #         print(hex(channel_number), hex(program_number))
     #         program_numbers[channel_number] = program_number
-        
+
     #     return program_numbers
 
     def to_midi(
