@@ -4,6 +4,7 @@
 import argparse
 import io
 import os
+import simplejson
 
 from dam_okd_utility.okd_file import OkdFile, OkdFileType
 from dam_okd_utility.okd_file_data import OkdGenericChunk
@@ -63,12 +64,31 @@ def main(argv=None):
             )
 
             if isinstance(chunk, OkdPTrackInfoChunk):
+                output_path = os.path.join(args.output_path, "p_track_info_.json")
+                output_json = simplejson.dumps(
+                    chunk,
+                    indent=2,
+                )
+                with open(output_path, "w") as output_file:
+                    output_file.write(output_json)
+
                 # Prioritize Extended P-Track Information
                 if p_track_info_entries is not None:
                     continue
 
                 p_track_info_entries = chunk.p_track_info
             elif isinstance(chunk, OkdExtendedPTrackInfoChunk):
+                output_path = os.path.join(
+                    args.output_path, "extended_p_track_info_.json"
+                )
+                output_json = simplejson.dumps(
+                    chunk,
+                    sort_keys=True,
+                    indent=2,
+                )
+                with open(output_path, "w") as output_file:
+                    output_file.write(output_json)
+
                 p_track_info_entries = chunk.extended_p_track_info
             elif isinstance(chunk, OkdPTrackChunk):
                 track_number = chunk_buffer[3]
