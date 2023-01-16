@@ -212,8 +212,11 @@ class OkdPTrackChunk(NamedTuple):
 
         midi.tracks.append(setup_track)
 
+        # program_numbers = OkdPTrackChunk.load_program_numbers_from_sysex_messages(self.track)
+
         for channel in range(16):
             track = mido.MidiTrack()
+            # track.append(mido.Message('program_change', channel=channel, program=program_numbers[channel]))
             current_time = 0
             for absolute_time, message in raw_track:
                 if not hasattr(message, "channel"):
