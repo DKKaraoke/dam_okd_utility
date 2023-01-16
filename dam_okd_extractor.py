@@ -6,29 +6,33 @@ import io
 import os
 
 from dam_okd_utility.okd_file import OkdFile, OkdFileType
-from dam_okd_utility.okd_p_track_info_chunk import OkdPTrackInfoEntry, OkdPTrackInfoChunk
-from dam_okd_utility.okd_extended_p_track_info_chunk import OkdExtendedPTrackInfoEntry, OkdExtendedPTrackInfoChunk
+from dam_okd_utility.okd_p_track_info_chunk import (
+    OkdPTrackInfoEntry,
+    OkdPTrackInfoChunk,
+)
+from dam_okd_utility.okd_extended_p_track_info_chunk import (
+    OkdExtendedPTrackInfoEntry,
+    OkdExtendedPTrackInfoChunk,
+)
 from dam_okd_utility.okd_p_track_chunk import OkdPTrackChunk
 from dam_okd_utility.okd_adpcm_chunk import OkdAdpcmChunk
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(
-        description='DAM OKD Extractor')
-    parser.add_argument(
-        "input_path", help='Input DAM OKD file path')
-    parser.add_argument(
-        "output_path", help='Output directory path')
+    parser = argparse.ArgumentParser(description="DAM OKD Extractor")
+    parser.add_argument("input_path", help="Input DAM OKD file path")
+    parser.add_argument("output_path", help="Output directory path")
     args = parser.parse_args()
 
-    with open(args.input_path, 'rb') as input_file:
+    with open(args.input_path, "rb") as input_file:
         chunks_stream = io.BytesIO()
-        okd_header = OkdFile.decrypt(
-            input_file, chunks_stream, OkdFileType.OKD)
-        print(f'Header found. header={okd_header}')
+        okd_header = OkdFile.decrypt(input_file, chunks_stream, OkdFileType.OKD)
+        print(f"Header found. header={okd_header}")
         chunks_stream.seek(0)
 
-        p_track_info_entries: list[OkdPTrackInfoEntry] | list[OkdExtendedPTrackInfoEntry] | None = None
+        p_track_info_entries: list[OkdPTrackInfoEntry] | list[
+            OkdExtendedPTrackInfoEntry
+        ] | None = None
 
         chunk_index = OkdFile.index_chunk(chunks_stream)
         chunks_stream.seek(0)
@@ -49,12 +53,15 @@ def main(argv=None):
             #         output_file.write(unchunked_buffer)
             #     continue
             output_path = os.path.join(
-                args.output_path, 'chunk_0x' + generic_chunk.chunk_id.hex() + '.bin')
-            with open(output_path, 'wb') as output_file:
+                args.output_path, "chunk_0x" + generic_chunk.chunk_id.hex() + ".bin"
+            )
+            with open(output_path, "wb") as output_file:
                 output_file.write(generic_chunk.data)
 
             chunk = OkdFile.parse_chunk(chunk_buffer)
-            print(f'{type(chunk).__name__} found. chunk_id={generic_chunk.chunk_id}, chunk_id_hex={generic_chunk.chunk_id.hex()}')
+            print(
+                f"{type(chunk).__name__} found. chunk_id={generic_chunk.chunk_id}, chunk_id_hex={generic_chunk.chunk_id.hex()}"
+            )
 
             if isinstance(chunk, OkdPTrackInfoChunk):
                 # Prioritize Extended P-Track Information
@@ -68,26 +75,30 @@ def main(argv=None):
                 track_number = chunk_buffer[3]
 
                 if p_track_info_entries is None:
-                    print('P-Track Information not found.')
+                    print("P-Track Information not found.")
                     continue
-                track_info_entry: OkdPTrackInfoEntry | OkdExtendedPTrackInfoEntry | None = None
+                track_info_entry: OkdPTrackInfoEntry | OkdExtendedPTrackInfoEntry | None = (
+                    None
+                )
                 for entry in p_track_info_entries:
                     if entry.track_number == track_number:
                         track_info_entry = entry
                         break
                 if track_info_entry is None:
-                    print('P-Track Information Entry not found.')
+                    print("P-Track Information Entry not found.")
                     continue
 
                 output_path = os.path.join(
-                    args.output_path, 'p_track_' + str(track_number) + '.mid')
+                    args.output_path, "p_track_" + str(track_number) + ".mid"
+                )
                 midi = chunk.to_midi(track_info_entry)
                 midi.save(output_path)
             elif isinstance(chunk, OkdAdpcmChunk):
                 for index, adpcm in enumerate(chunk.adpcms):
                     output_path = os.path.join(
-                        args.output_path, 'adpcm_' + str(index) + '.bin')
-                    with open(output_path, 'wb') as output_file:
+                        args.output_path, "adpcm_" + str(index) + ".bin"
+                    )
+                    with open(output_path, "wb") as output_file:
                         output_file.write(adpcm)
 
 

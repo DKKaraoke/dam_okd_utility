@@ -79,8 +79,9 @@ class DioOkdHeader(NamedTuple):
     crc_loader: int
 
 
-OkdHeader = Union[GenericOkdHeader, MmtOkdHeader,
-                  MmkOkdHeader, SprOkdHeader, DioOkdHeader]
+OkdHeader = Union[
+    GenericOkdHeader, MmtOkdHeader, MmkOkdHeader, SprOkdHeader, DioOkdHeader
+]
 
 
 class OkaHeader(NamedTuple):
