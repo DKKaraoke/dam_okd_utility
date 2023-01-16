@@ -19,9 +19,81 @@ class OkdPTrackChunk(NamedTuple):
         track = OkdPTrackMidi.read(stream)
         return OkdPTrackChunk(track)
 
+    def load_memory_from_sysex_messages(track: list[OkdMidiMessage]):
+        memory = [0x00] * 0x200000
+
+        valid_sysex_exists = False
+        for message in track:
+            status_byte = message.data[0]
+            if status_byte != 0xF0:
+                continue
+            manufacture_id = message.data[1]
+            if manufacture_id != 0x43:
+                OkdPTrackChunk.__logger.warning(
+                    f"Unknown manufacture ID detected. manufacture_id={manufacture_id}"
+                )
+                continue
+            if message.data[2] & 0x10 != 0x10:
+                OkdPTrackChunk.__logger.warning("Invalid Parameter Change detected.")
+                continue
+            device_number = message.data[2] & 0x0F
+            model_id = message.data[3]
+            address = message.data[4] << 14 | message.data[5] << 7 | message.data[6]
+            data_length = len(message.data) - 9
+            data = message.data[7 : 7 + data_length]
+            end_mark = message.data[-1]
+            if end_mark != 0xF7:
+                OkdPTrackChunk.__logger.warning("Invalid SysEx end mark detected.")
+                continue
+
+            memory[address : address + data_length] = data
+
+            valid_sysex_exists = True
+
+        return memory if valid_sysex_exists else None
+
+    # def load_program_numbers_from_sysex_messages(track: list[OkdMidiMessage]):
+    #     program_numbers = [0x00] * 16
+
+    #     for message in track:
+    #         status_byte = message.data[0]
+    #         if status_byte != 0xF0:
+    #             continue
+    #         manufacture_id = message.data[1]
+    #         if manufacture_id != 0x43:
+    #             OkdPTrackChunk.__logger.warning(
+    #                 f"Unknown manufacture ID detected. manufacture_id={manufacture_id}"
+    #             )
+    #             continue
+    #         if message.data[2] & 0x10 != 0x10:
+    #             OkdPTrackChunk.__logger.warning("Invalid Parameter Change detected.")
+    #             continue
+
+    #         end_mark = message.data[-1]
+    #         if end_mark != 0xF7:
+    #             OkdPTrackChunk.__logger.warning("Invalid SysEx end mark detected.")
+    #             continue
+
+    #         if message.data[4] != 0x02 or message.data[6] != 0x03:
+    #             continue
+
+    #         channel_number = message.data[5]
+    #         if 16 < channel_number:
+    #             continue
+    #         program_number = message.data[7]
+    #         print(hex(channel_number), hex(program_number))
+    #         program_numbers[channel_number] = program_number
+        
+    #     return program_numbers
+
     def to_midi(
         self, track_info_entry: OkdPTrackInfoEntry | OkdExtendedPTrackInfoEntry
     ):
+        memory = OkdPTrackChunk.load_memory_from_sysex_messages(self.track)
+        if memory is not None:
+            OkdPTrackChunk.__logger.debug("MIDI device memory dump:")
+            OkdPTrackChunk.__logger.debug("\n" + dump_memory(memory))
+
         absolute_track = OkdPTrackMidi.to_absolute_track(self.track)
 
         raw_track: list[tuple[int, mido.Message]] = []
