@@ -45,11 +45,10 @@ def main(argv=None):
             try:
                 generic_chunk = OkdFile.parse_generic_chunk(chunk_buffer)
             except:
-                print(f'Unchunked data found.')
+                print(f"Unchunked data found.")
                 unchunked_buffer = chunk_buffer
-                output_path = os.path.join(
-                    args.output_path, 'unchunked.bin')
-                with open(output_path, 'wb') as output_file:
+                output_path = os.path.join(args.output_path, "unchunked.bin")
+                with open(output_path, "wb") as output_file:
                     output_file.write(unchunked_buffer)
                 continue
             output_path = os.path.join(
