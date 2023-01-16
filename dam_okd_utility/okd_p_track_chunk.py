@@ -19,7 +19,7 @@ class OkdPTrackChunk(NamedTuple):
     def read(stream: bitstring.BitStream):
         track = OkdPTrackMidi.read(stream)
         # for message in track:
-        #     print("MEG:", message.data.hex(" "))
+        #     print("MSG:", message.data.hex(" "))
         return OkdPTrackChunk(track)
 
     def load_memory_from_sysex_messages(track: list[OkdMidiMessage]):
@@ -56,7 +56,7 @@ class OkdPTrackChunk(NamedTuple):
         return memory if valid_sysex_exists else None
 
     def load_program_numbers_from_sysex_messages(track: list[OkdMidiMessage]):
-        program_numbers = [0x7f] * 64
+        program_numbers = [0x00] * 0x7f
 
         for message in track:
             status_byte = message.data[0]
@@ -215,7 +215,8 @@ class OkdPTrackChunk(NamedTuple):
 
         for channel in range(16):
             track = mido.MidiTrack()
-            track.append(mido.Message('program_change', channel=channel, program=program_numbers[channel + 1]))
+            program_number = program_numbers[channel + 1]
+            track.append(mido.Message('program_change', channel=channel, program=program_number))
             current_time = 0
             for absolute_time, message in raw_track:
                 if not hasattr(message, "channel"):
