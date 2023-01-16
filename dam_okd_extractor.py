@@ -6,6 +6,7 @@ import io
 import os
 
 from dam_okd_utility.okd_file import OkdFile, OkdFileType
+from dam_okd_utility.okd_file_data import OkdGenericChunk
 from dam_okd_utility.okd_p_track_info_chunk import (
     OkdPTrackInfoEntry,
     OkdPTrackInfoChunk,
@@ -40,18 +41,17 @@ def main(argv=None):
             chunks_stream.seek(chunk_position)
             chunk_buffer = chunks_stream.read(chunk_size)
 
-            generic_chunk = OkdFile.parse_generic_chunk(chunk_buffer)
-            # generic_chunk: OkdGenericChunk
-            # try:
-            #     generic_chunk = OkdFile.parse_generic_chunk(chunk_buffer)
-            # except:
-            #     print(f'Unchunked data found.')
-            #     unchunked_buffer = chunk_buffer
-            #     output_path = os.path.join(
-            #         args.output_path, 'unchunked.bin')
-            #     with open(output_path, 'wb') as output_file:
-            #         output_file.write(unchunked_buffer)
-            #     continue
+            generic_chunk: OkdGenericChunk
+            try:
+                generic_chunk = OkdFile.parse_generic_chunk(chunk_buffer)
+            except:
+                print(f'Unchunked data found.')
+                unchunked_buffer = chunk_buffer
+                output_path = os.path.join(
+                    args.output_path, 'unchunked.bin')
+                with open(output_path, 'wb') as output_file:
+                    output_file.write(unchunked_buffer)
+                continue
             output_path = os.path.join(
                 args.output_path, "chunk_0x" + generic_chunk.chunk_id.hex() + ".bin"
             )
