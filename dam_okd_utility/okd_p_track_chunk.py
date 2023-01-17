@@ -36,20 +36,17 @@ class OkdPTrackChunk(NamedTuple):
             if current_midi_device is None:
                 raise ValueError("P-Track MIDI device is not loaded.")
 
-            if midi_device is not None:
-                midi_devices.append(midi_device)
-            else:
-                midi_devices.append(current_midi_device)
+            midi_devices.append(current_midi_device)
+
+        port_track_map: list[int | None] = [None] * OkdPTrackMidi.PORT_COUNT
+        for index, track_info_entry in enumerate(track_info):
+            port_track_map[track_info_entry.track_number] = index
 
         midi = mido.MidiFile()
         raw_track_count = len(raw_tracks)
         for port in range(raw_track_count):
-            midi_device_status = midi_devices[port].get_state()
+            track_number = port_track_map[port]
             for channel in range(OkdPTrackMidi.CHANNEL_COUNT_PER_PORT):
-                midi_parameter_change = midi_device_status.midi_parameter_changes[
-                    channel + 1
-                ]
-
                 midi_track = mido.MidiTrack()
                 # Port
                 midi_track.append(
@@ -58,48 +55,54 @@ class OkdPTrackChunk(NamedTuple):
                         port=port,
                     )
                 )
-                # Volume
-                midi_track.append(
-                    mido.Message(
-                        "control_change",
-                        channel=channel,
-                        control=0x07,
-                        value=midi_parameter_change.volume,
+
+                if track_number is not None:
+                    midi_device_status = midi_devices[track_number].get_state()
+                    midi_parameter_change = midi_device_status.midi_parameter_changes[
+                        channel + 1
+                    ]
+                    # Volume
+                    midi_track.append(
+                        mido.Message(
+                            "control_change",
+                            channel=channel,
+                            control=0x07,
+                            value=midi_parameter_change.volume,
+                        )
                     )
-                )
-                # Program Change
-                midi_track.append(
-                    mido.Message(
-                        "program_change",
-                        channel=channel,
-                        program=midi_parameter_change.program_number,
+                    # Program Change
+                    midi_track.append(
+                        mido.Message(
+                            "program_change",
+                            channel=channel,
+                            program=midi_parameter_change.program_number,
+                        )
                     )
-                )
-                # Bend Pitch Control
-                midi_track.append(
-                    mido.Message(
-                        "control_change",
-                        channel=channel,
-                        control=0x65,
-                        value=0x00,
+                    # Bend Pitch Control
+                    midi_track.append(
+                        mido.Message(
+                            "control_change",
+                            channel=channel,
+                            control=0x65,
+                            value=0x00,
+                        )
                     )
-                )
-                midi_track.append(
-                    mido.Message(
-                        "control_change",
-                        channel=channel,
-                        control=0x64,
-                        value=0x00,
+                    midi_track.append(
+                        mido.Message(
+                            "control_change",
+                            channel=channel,
+                            control=0x64,
+                            value=0x00,
+                        )
                     )
-                )
-                midi_track.append(
-                    mido.Message(
-                        "control_change",
-                        channel=channel,
-                        control=0x06,
-                        value=midi_parameter_change.bend_pitch_control,
+                    midi_track.append(
+                        mido.Message(
+                            "control_change",
+                            channel=channel,
+                            control=0x06,
+                            value=midi_parameter_change.bend_pitch_control,
+                        )
                     )
-                )
 
                 midi.tracks.append(midi_track)
 
