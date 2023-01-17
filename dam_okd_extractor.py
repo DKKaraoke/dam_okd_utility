@@ -35,7 +35,7 @@ def main(argv=None):
         print(f"Header found. header={okd_header}")
         chunks_stream.seek(0)
 
-        p_track_midi_device = OkdPTrackMidiDevice()
+        p_track_midi_device: OkdPTrackMidiDevice | None = None
         p_track_part_number = 0
         p_track_total_part_number = 0
         p_track_info_entries: list[OkdPTrackInfoEntry] | list[
@@ -112,6 +112,10 @@ def main(argv=None):
                 if midi_device is not None:
                     p_track_midi_device = midi_device
                     p_track_part_number = 0
+
+                if p_track_midi_device is None:
+                    print("midi_device not initialized yet.")
+                    break
 
                 track_number = chunk_buffer[3]
 

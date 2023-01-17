@@ -20,7 +20,7 @@ class OkdPTrackMidiDevice(NamedTuple):
     __logger = getLogger("OkdPTrackMidiDevice")
 
     @staticmethod
-    def load_from_sysex_messages(track: list[OkdMidiMessage]):
+    def get_initial_memory():
         memory = [0x00] * 0x200000
 
         # Set default value
@@ -29,6 +29,12 @@ class OkdPTrackMidiDevice(NamedTuple):
             memory[0x8001 + (channel << 7)] = 0x7F
             # Bend Pitch Control
             memory[0x8041 + (channel << 7)] = 0x42
+
+        return memory
+
+    @staticmethod
+    def load_from_sysex_messages(track: list[OkdMidiMessage]):
+        memory = OkdPTrackMidiDevice.get_initial_memory()
 
         valid_sysex_exists = False
         for message in track:
@@ -65,8 +71,8 @@ class OkdPTrackMidiDevice(NamedTuple):
     def get_state(self):
         midi_parameter_changes = []
         for channel in range(0x40):
-            program_number = self.memory[0x8003 + (channel << 7)]
             volume = self.memory[0x8001 + (channel << 7)]
+            program_number = self.memory[0x8003 + (channel << 7)]
             bend_pitch_control = self.memory[0x8041 + (channel << 7)] - 0x40
 
             midi_parameter_changes.append(
@@ -77,4 +83,4 @@ class OkdPTrackMidiDevice(NamedTuple):
 
         return OkdPTrackMidiDeviceState(midi_parameter_changes)
 
-    memory: list[int] = [0x00] * 0x200000
+    memory: list[int]
