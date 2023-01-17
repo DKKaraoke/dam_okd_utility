@@ -67,7 +67,7 @@ class OkdPTrackMidiDevice(NamedTuple):
         for channel in range(0x40):
             program_number = self.memory[0x8003 + (channel << 7)]
             volume = self.memory[0x8001 + (channel << 7)]
-            bend_pitch_control = self.memory[0x8041 + (channel << 7)]
+            bend_pitch_control = self.memory[0x8041 + (channel << 7)] - 0x40
 
             midi_parameter_changes.append(
                 OkdPTrackMidiDeviceStatusMidiParameterChange(

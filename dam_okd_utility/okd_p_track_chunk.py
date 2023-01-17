@@ -202,7 +202,7 @@ class OkdPTrackChunk(NamedTuple):
                     "control_change",
                     channel=channel,
                     control=0x06,
-                    value=midi_parameter_change.bend_pitch_control - 0x40,
+                    value=midi_parameter_change.bend_pitch_control,
                 )
             )
 
