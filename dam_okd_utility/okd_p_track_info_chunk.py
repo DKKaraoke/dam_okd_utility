@@ -82,9 +82,11 @@ class OkdPTrackInfoChunk(NamedTuple):
     __logger = getLogger("OkdPTrackInfoChunk")
 
     @staticmethod
-    def read(stream: bitstring.BitStream):
+    def read(stream: bitstring.BitStream, multiple_entry = True):
         p_track_info: list[OkdPTrackInfoEntry] = []
-        entry_count = stream.read("uintbe:16")
+        entry_count = 1
+        if multiple_entry:
+            entry_count = stream.read("uintbe:16")
         for _ in range(entry_count):
             entry = OkdPTrackInfoEntry.read(stream)
             p_track_info.append(entry)

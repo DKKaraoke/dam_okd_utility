@@ -518,6 +518,8 @@ class OkdFile:
 
         if chunk_id == b"YPTI":
             return OkdPTrackInfoChunk.read(chunk_data_stream)
+        elif chunk_id == b"YP3I":
+            return OkdPTrackInfoChunk.read(chunk_data_stream, False)
         elif chunk_id == b"YPXI":
             return OkdExtendedPTrackInfoChunk.read(chunk_data_stream)
         elif chunk_id[0:3] == b"\xffMR":
