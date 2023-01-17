@@ -10,6 +10,7 @@ import simplejson
 from dam_okd_utility.okd_file import OkdFile, OkdFileType
 from dam_okd_utility.okd_file_data import OkdGenericChunk
 from dam_okd_utility.okd_p_track_midi_device import OkdPTrackMidiDevice
+from dam_okd_utility.okd_m_track_chunk import OkdMTrackChunk
 from dam_okd_utility.okd_p_track_info_chunk import (
     OkdPTrackInfoEntry,
     OkdPTrackInfoChunk,
@@ -70,8 +71,17 @@ def main(argv=None):
                 f"{type(chunk).__name__} found. chunk_id={generic_chunk.chunk_id}, chunk_id_hex={generic_chunk.chunk_id.hex()}"
             )
 
-            if isinstance(chunk, OkdPTrackInfoChunk):
-                output_path = os.path.join(args.output_path, "p_track_info_.json")
+            if isinstance(chunk, OkdMTrackChunk):
+                output_path = os.path.join(args.output_path, "m_track.json")
+                output_json = simplejson.dumps(
+                    chunk.to_json_serializable(),
+                    sort_keys=True,
+                    indent=2,
+                )
+                with open(output_path, "w") as output_file:
+                    output_file.write(output_json)
+            elif isinstance(chunk, OkdPTrackInfoChunk):
+                output_path = os.path.join(args.output_path, "p_track_info.json")
                 output_json = simplejson.dumps(
                     chunk,
                     indent=2,
@@ -86,7 +96,7 @@ def main(argv=None):
                 p_track_info_entries = chunk.p_track_info
             elif isinstance(chunk, OkdExtendedPTrackInfoChunk):
                 output_path = os.path.join(
-                    args.output_path, "extended_p_track_info_.json"
+                    args.output_path, "extended_p_track_info.json"
                 )
                 output_json = simplejson.dumps(
                     chunk,
