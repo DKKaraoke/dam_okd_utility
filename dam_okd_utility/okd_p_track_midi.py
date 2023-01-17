@@ -37,7 +37,6 @@ class OkdPTrackMidi:
 
     @staticmethod
     def __message_to_absolute(
-        track_number: int,
         track_info_entry: OkdPTrackInfoEntry | OkdExtendedPTrackInfoEntry,
         time: int,
         data: bytes,
@@ -105,7 +104,6 @@ class OkdPTrackMidi:
 
     @staticmethod
     def __one_track_to_absolute(
-        track_number: int,
         track_info_entry: OkdPTrackInfoEntry | OkdExtendedPTrackInfoEntry,
         track: list[OkdMidiMessage],
     ):
@@ -138,7 +136,6 @@ class OkdPTrackMidi:
                 note_on_bytearray[2] = note_on_velocity
                 absolute_track.extend(
                     OkdPTrackMidi.__message_to_absolute(
-                        track_number,
                         track_info_entry,
                         absolute_time,
                         bytes(note_on_bytearray),
@@ -152,7 +149,6 @@ class OkdPTrackMidi:
                 note_off_bytearray[2] = note_off_velocity
                 absolute_track.extend(
                     OkdPTrackMidi.__message_to_absolute(
-                        track_number,
                         track_info_entry,
                         absolute_time + duration,
                         bytes(note_off_bytearray),
@@ -169,7 +165,6 @@ class OkdPTrackMidi:
 
                 absolute_track.extend(
                     OkdPTrackMidi.__message_to_absolute(
-                        track_number,
                         track_info_entry,
                         absolute_time,
                         bytes(message.data),
@@ -183,7 +178,6 @@ class OkdPTrackMidi:
                 note_off_bytearray[2] = 0x40
                 absolute_track.extend(
                     OkdPTrackMidi.__message_to_absolute(
-                        track_number,
                         track_info_entry,
                         absolute_time + duration,
                         bytes(note_off_bytearray),
@@ -201,7 +195,6 @@ class OkdPTrackMidi:
                 message_data_bytearray[2] = message.data[1]
                 absolute_track.extend(
                     OkdPTrackMidi.__message_to_absolute(
-                        track_number,
                         track_info_entry,
                         absolute_time,
                         bytes(message_data_bytearray),
@@ -219,7 +212,6 @@ class OkdPTrackMidi:
                 message_data_bytearray[2] = message.data[1]
                 absolute_track.extend(
                     OkdPTrackMidi.__message_to_absolute(
-                        track_number,
                         track_info_entry,
                         absolute_time,
                         bytes(message_data_bytearray),
@@ -229,7 +221,6 @@ class OkdPTrackMidi:
             else:
                 absolute_track.extend(
                     OkdPTrackMidi.__message_to_absolute(
-                        track_number,
                         track_info_entry,
                         absolute_time,
                         bytes(message.data),
@@ -269,7 +260,7 @@ class OkdPTrackMidi:
                 raise ValueError("P-Track Information Entry not found.")
 
             absolute_track = OkdPTrackMidi.__one_track_to_absolute(
-                track_number, track_info_entry, track
+                track_info_entry, track
             )
             merged_absolute_track.extend(absolute_track)
 
