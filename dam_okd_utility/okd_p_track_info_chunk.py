@@ -10,12 +10,18 @@ class OkdPTrackInfoChannelInfoEntry(NamedTuple):
     @staticmethod
     def read(stream: bitstring.BitStream):
         attribute: int = stream.read("uint:8")
-        port: int = stream.read("uint:8")
+        port: int = stream.read("uint:8") & 0x07
         control_change_ax: int = stream.read("uint:8")
         control_change_cx: int = stream.read("uint:8")
         return OkdPTrackInfoChannelInfoEntry(
             attribute, port, control_change_ax, control_change_cx
         )
+
+    def is_chorus(self):
+        return self.attribute & 0x01 != 0x01
+
+    def is_guide_melody(self):
+        return self.attribute & 0x80 != 0x80
 
     attribute: int
     port: int
