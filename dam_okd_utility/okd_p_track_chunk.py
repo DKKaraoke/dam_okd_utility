@@ -163,11 +163,46 @@ class OkdPTrackChunk(NamedTuple):
             midi_parameter_change = device_state.midi_parameter_changes[
                 midi_parameter_change_index
             ]
+            # Volume
+            track.append(
+                mido.Message(
+                    "control_change",
+                    channel=channel,
+                    control=0x07,
+                    value=midi_parameter_change.volume,
+                )
+            )
+            # Program Change
             track.append(
                 mido.Message(
                     "program_change",
                     channel=channel,
                     program=midi_parameter_change.program_number,
+                )
+            )
+            # Bend Pitch Control
+            track.append(
+                mido.Message(
+                    "control_change",
+                    channel=channel,
+                    control=0x65,
+                    value=0x00,
+                )
+            )
+            track.append(
+                mido.Message(
+                    "control_change",
+                    channel=channel,
+                    control=0x64,
+                    value=0x00,
+                )
+            )
+            track.append(
+                mido.Message(
+                    "control_change",
+                    channel=channel,
+                    control=0x06,
+                    value=midi_parameter_change.bend_pitch_control - 0x40,
                 )
             )
 

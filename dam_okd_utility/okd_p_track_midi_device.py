@@ -5,7 +5,9 @@ from dam_okd_utility.okd_midi import OkdMidiMessage
 
 
 class OkdPTrackMidiDeviceStatusMidiParameterChange(NamedTuple):
+    volume: int
     program_number: int
+    bend_pitch_control: int
 
 
 class OkdPTrackMidiDeviceState(NamedTuple):
@@ -20,6 +22,13 @@ class OkdPTrackMidiDevice(NamedTuple):
     @staticmethod
     def load_from_sysex_messages(track: list[OkdMidiMessage]):
         memory = [0x00] * 0x200000
+
+        # Set default value
+        for channel in range(0x40):
+            # Volume
+            memory[0x8001 + (channel << 7)] = 0x7F
+            # Bend Pitch Control
+            memory[0x8041 + (channel << 7)] = 0x42
 
         valid_sysex_exists = False
         for message in track:
@@ -57,10 +66,12 @@ class OkdPTrackMidiDevice(NamedTuple):
         midi_parameter_changes = []
         for channel in range(0x40):
             program_number = self.memory[0x8003 + (channel << 7)]
+            volume = self.memory[0x8001 + (channel << 7)]
+            bend_pitch_control = self.memory[0x8041 + (channel << 7)]
 
             midi_parameter_changes.append(
                 OkdPTrackMidiDeviceStatusMidiParameterChange(
-                    program_number,
+                    volume, program_number, bend_pitch_control
                 )
             )
 
