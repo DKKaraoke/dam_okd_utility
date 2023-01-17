@@ -10,14 +10,14 @@ class OkdExtendedPTrackInfoChannelInfoEntry(NamedTuple):
     @staticmethod
     def read(stream: bitstring.BitStream):
         attribute: int = stream.read("uintle:16")
-        port: int = stream.read("uintbe:16")
+        ports: int = stream.read("uintbe:16")
         reserved: int = stream.read("uintbe:16")
         control_change_ax: int = stream.read("uint:8")
         control_change_cx: int = stream.read("uint:8")
         return OkdExtendedPTrackInfoChannelInfoEntry(
-            attribute, port, reserved, control_change_ax, control_change_cx
+            attribute, ports, reserved, control_change_ax, control_change_cx
         )
-    
+
     def is_chorus(self):
         return self.attribute & 0x80 != 0x80
 
@@ -25,7 +25,7 @@ class OkdExtendedPTrackInfoChannelInfoEntry(NamedTuple):
         return self.attribute & 0x0100 == 0x0100
 
     attribute: int
-    port: int
+    ports: int
     reserved: int
     control_change_ax: int
     control_change_cx: int
@@ -90,12 +90,12 @@ class OkdExtendedPTrackInfoChunk(NamedTuple):
         # Skip unknown
         stream.bytepos += 8
         tg_mode = stream.read("uintbe:16")
-        extended_p_track_info: list[OkdExtendedPTrackInfoEntry] = []
+        data: list[OkdExtendedPTrackInfoEntry] = []
         entry_count = stream.read("uintbe:16")
         for _ in range(entry_count):
             entry = OkdExtendedPTrackInfoEntry.read(stream)
-            extended_p_track_info.append(entry)
-        return OkdExtendedPTrackInfoChunk(tg_mode, extended_p_track_info)
+            data.append(entry)
+        return OkdExtendedPTrackInfoChunk(tg_mode, data)
 
     tg_mode: int
-    extended_p_track_info: list[OkdExtendedPTrackInfoEntry]
+    data: list[OkdExtendedPTrackInfoEntry]

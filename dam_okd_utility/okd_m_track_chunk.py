@@ -13,12 +13,12 @@ class OkdMTrackChunk(NamedTuple):
 
     @staticmethod
     def read(stream: bitstring.BitStream):
-        track = OkdMTrackMidi.read(stream)
-        return OkdMTrackChunk(track)
+        messages = OkdMTrackMidi.read(stream)
+        return OkdMTrackChunk(messages)
 
     def to_json_serializable(self):
         json_track = []
-        for message in self.track:
+        for message in self.messages:
             json_track.append(
                 {
                     "delta_time": message.delta_time,
@@ -28,4 +28,4 @@ class OkdMTrackChunk(NamedTuple):
             )
         return {"track": json_track}
 
-    track: list[OkdMidiMessage]
+    messages: list[OkdMidiMessage]
