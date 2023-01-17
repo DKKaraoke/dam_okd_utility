@@ -27,7 +27,9 @@ class OkdPTrackChunk(NamedTuple):
         raw_tracks: list[tuple[int, list[OkdMidiMessage]]],
         track_info: list[OkdPTrackInfoEntry] | list[OkdExtendedPTrackInfoEntry],
     ):
-        midi_devices: list[OkdPTrackMidiDevice] = []
+        midi_devices: list[OkdPTrackMidiDevice | None] = [
+            None
+        ] * OkdPTrackMidi.PORT_COUNT
         current_midi_device: OkdPTrackMidiDevice | None = None
         for track_number, raw_track in raw_tracks:
             midi_device = OkdPTrackMidiDevice.load_from_sysex_messages(raw_track)
@@ -36,11 +38,15 @@ class OkdPTrackChunk(NamedTuple):
             if current_midi_device is None:
                 raise ValueError("P-Track MIDI device is not loaded.")
 
-            midi_devices.append(current_midi_device)
+            midi_devices[track_number] = current_midi_device
+
+        track_info_entry_index_map = [-1] * OkdPTrackMidi.PORT_COUNT
+        for index, entry in enumerate(track_info):
+            track_info_entry_index_map[entry.track_number] = index
 
         port_track_map: list[int | None] = [None] * OkdPTrackMidi.PORT_COUNT
         for index, track_info_entry in enumerate(track_info):
-            port_track_map[track_info_entry.track_number] = index
+            port_track_map[index] = track_info_entry.track_number
 
         midi = mido.MidiFile()
         raw_track_count = len(raw_tracks)
@@ -48,6 +54,7 @@ class OkdPTrackChunk(NamedTuple):
             track_number = port_track_map[port]
             for channel in range(OkdPTrackMidi.CHANNEL_COUNT_PER_PORT):
                 midi_track = mido.MidiTrack()
+
                 # Port
                 midi_track.append(
                     mido.MetaMessage(
@@ -57,10 +64,20 @@ class OkdPTrackChunk(NamedTuple):
                 )
 
                 if track_number is not None:
-                    midi_device_status = midi_devices[track_number].get_state()
-                    midi_parameter_change = midi_device_status.midi_parameter_changes[
-                        channel + 1
+                    track_info_entry_index = track_info_entry_index_map[track_number]
+                    track_part_number: int
+                    if track_info_entry_index < 2:
+                        track_part_number = track_info_entry_index
+                    else:
+                        track_part_number = track_info_entry_index - 2
+                    midi_device = midi_devices[track_number]
+                    midi_device_state = midi_device.get_state()
+                    midi_parameter_change = midi_device_state.midi_parameter_changes[
+                        OkdPTrackMidi.CHANNEL_COUNT_PER_PORT * track_part_number
+                        + channel
+                        + 1
                     ]
+
                     # Volume
                     midi_track.append(
                         mido.Message(
