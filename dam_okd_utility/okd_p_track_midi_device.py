@@ -65,7 +65,7 @@ class OkdPTrackMidiDevice(NamedTuple):
             # Pan
             memory[0x801E + (entry_index << 7)] = 0x40
             # Bend Pitch Control
-            memory[0x8041 + (entry_index << 7)] = 0x40
+            memory[0x8041 + (entry_index << 7)] = 0x42
 
         return memory
 
