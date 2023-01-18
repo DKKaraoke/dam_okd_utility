@@ -11,7 +11,6 @@ class OkdPTrackMidiDeviceStatusMidiParameterChange(NamedTuple):
     program_number: int
     volume: int
     pan: int
-    bend_pitch_control: int
 
 
 class OkdPTrackMidiDevice(NamedTuple):
@@ -64,8 +63,6 @@ class OkdPTrackMidiDevice(NamedTuple):
             memory[0x801B + (entry_index << 7)] = 0x40
             # Pan
             memory[0x801E + (entry_index << 7)] = 0x40
-            # Bend Pitch Control
-            memory[0x8041 + (entry_index << 7)] = 0x40
 
         return memory
 
@@ -115,14 +112,12 @@ class OkdPTrackMidiDevice(NamedTuple):
         program_number = self.memory[0x8003 + (entry_index << 7)]
         volume = self.memory[0x801B + (entry_index << 7)]
         pan = self.memory[0x801E + (entry_index << 7)]
-        bend_pitch_control = self.memory[0x8041 + (entry_index << 7)]
         return OkdPTrackMidiDeviceStatusMidiParameterChange(
             bank_select_msb,
             bank_select_lsb,
             program_number,
             volume,
             pan,
-            bend_pitch_control,
         )
 
     memory: list[int]
