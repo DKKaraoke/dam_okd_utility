@@ -5,9 +5,11 @@ from dam_okd_utility.okd_midi import OkdMidiMessage
 
 
 class OkdPTrackMidiDeviceStatusMidiParameterChange(NamedTuple):
-    volume: int
+    bank_select_lsb: int
+    bank_select_msb: int
     program_number: int
-    bend_pitch_control: int
+    volume: int
+    pan: int
 
 
 class OkdPTrackMidiDeviceState(NamedTuple):
@@ -26,9 +28,9 @@ class OkdPTrackMidiDevice(NamedTuple):
         # Set default value
         for channel in range(0x40):
             # Volume
-            memory[0x8001 + (channel << 7)] = 0x7F
-            # Bend Pitch Control
-            memory[0x8041 + (channel << 7)] = 0x42
+            memory[0x801b + (channel << 7)] = 0x40
+            # Pan
+            memory[0x801e + (channel << 7)] = 0x40
 
         return memory
 
@@ -71,13 +73,19 @@ class OkdPTrackMidiDevice(NamedTuple):
     def get_state(self):
         midi_parameter_changes = []
         for channel in range(0x40):
-            volume = self.memory[0x8001 + (channel << 7)]
+            bank_select_msb = self.memory[0x8001 + (channel << 7)]
+            bank_select_lsb = self.memory[0x8002 + (channel << 7)]
             program_number = self.memory[0x8003 + (channel << 7)]
-            bend_pitch_control = self.memory[0x8041 + (channel << 7)] - 0x40
+            volume = self.memory[0x801b + (channel << 7)]
+            pan = self.memory[0x801e + (channel << 7)]
 
             midi_parameter_changes.append(
                 OkdPTrackMidiDeviceStatusMidiParameterChange(
-                    volume, program_number, bend_pitch_control
+                    bank_select_msb,
+                    bank_select_lsb,
+                    program_number,
+                    volume,
+                    pan,
                 )
             )
 

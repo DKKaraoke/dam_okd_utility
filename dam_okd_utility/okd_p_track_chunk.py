@@ -82,6 +82,31 @@ class OkdPTrackChunk(NamedTuple):
                         + 1
                     ]
 
+                    # Bank select
+                    midi_track.append(
+                        mido.Message(
+                            "control_change",
+                            channel=channel,
+                            control=0x00,
+                            value=midi_parameter_change.bank_select_msb,
+                        )
+                    )
+                    midi_track.append(
+                        mido.Message(
+                            "control_change",
+                            channel=channel,
+                            control=0x20,
+                            value=midi_parameter_change.bank_select_lsb,
+                        )
+                    )
+                    # Program Change
+                    midi_track.append(
+                        mido.Message(
+                            "program_change",
+                            channel=channel,
+                            program=midi_parameter_change.program_number,
+                        )
+                    )
                     # Volume
                     midi_track.append(
                         mido.Message(
@@ -91,12 +116,13 @@ class OkdPTrackChunk(NamedTuple):
                             value=midi_parameter_change.volume,
                         )
                     )
-                    # Program Change
+                    # Pan
                     midi_track.append(
                         mido.Message(
-                            "program_change",
+                            "control_change",
                             channel=channel,
-                            program=midi_parameter_change.program_number,
+                            control=0x0a,
+                            value=midi_parameter_change.pan,
                         )
                     )
                     # Bend Pitch Control
@@ -121,7 +147,7 @@ class OkdPTrackChunk(NamedTuple):
                             "control_change",
                             channel=channel,
                             control=0x06,
-                            value=midi_parameter_change.bend_pitch_control,
+                            value=0x42,
                         )
                     )
 
