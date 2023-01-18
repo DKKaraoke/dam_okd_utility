@@ -66,10 +66,14 @@ class OkdPTrackChunk(NamedTuple):
                 if track_number is not None:
                     track_info_entry_index = track_info_entry_index_map[track_number]
                     track_part_number: int
-                    if track_info_entry_index < 2:
-                        track_part_number = track_info_entry_index
+                    if raw_track_count <= 2:
+                        track_part_number = 0
                     else:
-                        track_part_number = track_info_entry_index - 2
+                        if track_info_entry_index < 2:
+                            track_part_number = track_info_entry_index
+                        else:
+                            track_part_number = track_info_entry_index - 2
+
                     midi_device = midi_devices[track_number]
                     midi_device_state = midi_device.get_state()
                     midi_parameter_change = midi_device_state.midi_parameter_changes[
