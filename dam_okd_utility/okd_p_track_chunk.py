@@ -75,12 +75,9 @@ class OkdPTrackChunk(NamedTuple):
                             track_part_number = track_info_entry_index - 2
 
                     midi_device = midi_devices[track_number]
-                    midi_device_state = midi_device.get_state()
-                    midi_parameter_change = midi_device_state.midi_parameter_changes[
-                        OkdPTrackMidi.CHANNEL_COUNT_PER_PORT * track_part_number
-                        + channel
-                        + 1
-                    ]
+                    midi_parameter_change = midi_device.get_midi_parameter_change(
+                        track_part_number, channel
+                    )
 
                     # Bank select
                     midi_track.append(
@@ -121,7 +118,7 @@ class OkdPTrackChunk(NamedTuple):
                         mido.Message(
                             "control_change",
                             channel=channel,
-                            control=0x0a,
+                            control=0x0A,
                             value=midi_parameter_change.pan,
                         )
                     )

@@ -2,6 +2,7 @@ from typing import NamedTuple
 
 from dam_okd_utility.customized_logger import getLogger
 from dam_okd_utility.okd_midi import OkdMidiMessage
+from dam_okd_utility.okd_p_track_midi import OkdPTrackMidi
 
 
 class OkdPTrackMidiDeviceStatusMidiParameterChange(NamedTuple):
@@ -12,25 +13,56 @@ class OkdPTrackMidiDeviceStatusMidiParameterChange(NamedTuple):
     pan: int
 
 
-class OkdPTrackMidiDeviceState(NamedTuple):
-    midi_parameter_changes: list[OkdPTrackMidiDeviceStatusMidiParameterChange]
-
-
 class OkdPTrackMidiDevice(NamedTuple):
     """DAM OKD P-Track MIDI Device"""
 
     __logger = getLogger("OkdPTrackMidiDevice")
+
+    MIDI_PARAMETER_CHANGE_ENTRY_INDEX_TABLE = [
+        0x01,
+        0x02,
+        0x03,
+        0x04,
+        0x05,
+        0x06,
+        0x07,
+        0x08,
+        0x09,
+        0x00,
+        0x0A,
+        0x0B,
+        0x0C,
+        0x0D,
+        0x0E,
+        0x0F,
+        0x11,
+        0x12,
+        0x13,
+        0x14,
+        0x15,
+        0x16,
+        0x17,
+        0x18,
+        0x19,
+        0x10,
+        0x1A,
+        0x1B,
+        0x1C,
+        0x1D,
+        0x1E,
+        0x1F,
+    ]
 
     @staticmethod
     def get_initial_memory():
         memory = [0x00] * 0x200000
 
         # Set default value
-        for channel in range(0x40):
+        for entry_index in range(0x40):
             # Volume
-            memory[0x801b + (channel << 7)] = 0x40
+            memory[0x801B + (entry_index << 7)] = 0x40
             # Pan
-            memory[0x801e + (channel << 7)] = 0x40
+            memory[0x801E + (entry_index << 7)] = 0x40
 
         return memory
 
@@ -70,25 +102,22 @@ class OkdPTrackMidiDevice(NamedTuple):
 
         return OkdPTrackMidiDevice(memory) if valid_sysex_exists else None
 
-    def get_state(self):
-        midi_parameter_changes = []
-        for channel in range(0x40):
-            bank_select_msb = self.memory[0x8001 + (channel << 7)]
-            bank_select_lsb = self.memory[0x8002 + (channel << 7)]
-            program_number = self.memory[0x8003 + (channel << 7)]
-            volume = self.memory[0x801b + (channel << 7)]
-            pan = self.memory[0x801e + (channel << 7)]
-
-            midi_parameter_changes.append(
-                OkdPTrackMidiDeviceStatusMidiParameterChange(
-                    bank_select_msb,
-                    bank_select_lsb,
-                    program_number,
-                    volume,
-                    pan,
-                )
-            )
-
-        return OkdPTrackMidiDeviceState(midi_parameter_changes)
+    def get_midi_parameter_change(self, track_part_number: int, channel: int):
+        entry_index = (
+            OkdPTrackMidi.CHANNEL_COUNT_PER_PORT * track_part_number
+            + OkdPTrackMidiDevice.MIDI_PARAMETER_CHANGE_ENTRY_INDEX_TABLE[channel]
+        )
+        bank_select_msb = self.memory[0x8001 + (entry_index << 7)]
+        bank_select_lsb = self.memory[0x8002 + (entry_index << 7)]
+        program_number = self.memory[0x8003 + (entry_index << 7)]
+        volume = self.memory[0x801B + (entry_index << 7)]
+        pan = self.memory[0x801E + (entry_index << 7)]
+        return OkdPTrackMidiDeviceStatusMidiParameterChange(
+            bank_select_msb,
+            bank_select_lsb,
+            program_number,
+            volume,
+            pan,
+        )
 
     memory: list[int]
