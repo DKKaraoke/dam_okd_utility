@@ -11,14 +11,11 @@ from dam_okd_utility.okd_midi import (
     OkdMidiMessage,
 )
 from dam_okd_utility.okd_p_track_info_chunk import (
-    OkdPTrackInfoChannelInfoEntry,
     OkdPTrackInfoEntry,
 )
 from dam_okd_utility.okd_extended_p_track_info_chunk import (
-    OkdExtendedPTrackInfoChannelInfoEntry,
     OkdExtendedPTrackInfoEntry,
 )
-from dam_okd_utility.okd_p_track_midi_device import OkdPTrackMidiDevice
 
 
 class OkdPTrackAbsoluteTrackMessage(NamedTuple):
