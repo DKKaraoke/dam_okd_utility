@@ -80,6 +80,9 @@ class OkdPTrackMidiDevice(NamedTuple):
             if status_byte != 0xF0:
                 continue
             manufacture_id = message.data[1]
+            if manufacture_id == 0x7f:
+                # XG System Message
+                continue
             if manufacture_id != 0x43:
                 OkdPTrackMidiDevice.__logger.warning(
                     f"Unknown manufacture ID detected. manufacture_id={hex(manufacture_id)}"
