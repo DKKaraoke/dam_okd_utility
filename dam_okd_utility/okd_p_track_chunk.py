@@ -34,11 +34,12 @@ class OkdPTrackChunk(NamedTuple):
         ] * OkdPTrackMidi.PORT_COUNT
         current_midi_device: OkdPTrackMidiDevice | None = None
         for track_number, raw_track in raw_tracks:
-            midi_device = OkdPTrackMidiDevice.load_from_sysex_messages(raw_track)
-            if midi_device is not None:
+            midi_device, valid_sysex_exists = OkdPTrackMidiDevice.load_from_sysex_messages(raw_track)
+            if valid_sysex_exists:
                 current_midi_device = midi_device
             if current_midi_device is None:
-                raise ValueError("P-Track MIDI device is not loaded.")
+                current_midi_device = midi_device
+                OkdPTrackChunk.__logger.info('No SysEx P-Track detected.')
 
             midi_devices[track_number] = current_midi_device
 
@@ -52,7 +53,7 @@ class OkdPTrackChunk(NamedTuple):
 
         midi = mido.MidiFile()
         raw_track_count = len(raw_tracks)
-        for port in range(raw_track_count):
+        for port in range(OkdPTrackMidi.PORT_COUNT):
             track_number = port_track_map[port]
             for channel in range(OkdPTrackMidi.CHANNEL_COUNT_PER_PORT):
                 midi_track = mido.MidiTrack()

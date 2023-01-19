@@ -104,7 +104,7 @@ class OkdPTrackMidiDevice(NamedTuple):
 
             valid_sysex_exists = True
 
-        return OkdPTrackMidiDevice(memory) if valid_sysex_exists else None
+        return OkdPTrackMidiDevice(memory), valid_sysex_exists
 
     def get_midi_parameter_change(self, track_part_number: int, channel: int):
         entry_index = (
