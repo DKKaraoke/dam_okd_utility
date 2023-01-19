@@ -20,8 +20,6 @@ class OkdPTrackChunk(NamedTuple):
     @staticmethod
     def read(stream: bitstring.BitStream):
         messages = OkdPTrackMidi.read(stream)
-        # for messsage in messages:
-        #     print(f'MSG: {messsage.data.hex(" ")}')
         return OkdPTrackChunk(messages)
 
     @staticmethod
@@ -168,10 +166,6 @@ class OkdPTrackChunk(NamedTuple):
         midi.tracks[0].append(mido.MetaMessage("set_tempo", tempo=mido.bpm2tempo(125)))
 
         absolute_messages = OkdPTrackMidi.to_absolute(raw_tracks, track_info)
-        # for message in absolute_messages:
-        #     print(
-        #         f"time={message.time}, port={message.port}, track={message.track}, data={message.data.hex()}"
-        #     )
         track_current_times = [0] * OkdPTrackMidi.TOTAL_CHANNEL_COUNT
         for absolute_message in absolute_messages:
             status_byte = absolute_message.data[0]
