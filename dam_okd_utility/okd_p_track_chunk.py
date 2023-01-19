@@ -149,6 +149,17 @@ class OkdPTrackChunk(NamedTuple):
                             value=midi_parameter_change.bend_pitch_control - 0x40,
                         )
                     )
+                    # Portamento
+                    midi_track.append(
+                        mido.Message(
+                            "control_change",
+                            channel=channel,
+                            control=0x41,
+                            value=0x00
+                            if midi_parameter_change.portamento == 0x00
+                            else 0x40,
+                        )
+                    )
 
                 midi.tracks.append(midi_track)
 

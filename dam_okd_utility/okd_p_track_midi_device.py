@@ -12,6 +12,7 @@ class OkdPTrackMidiDeviceStatusMidiParameterChange(NamedTuple):
     volume: int
     pan: int
     bend_pitch_control: int
+    portamento: int
 
 
 class OkdPTrackMidiDevice(NamedTuple):
@@ -81,7 +82,7 @@ class OkdPTrackMidiDevice(NamedTuple):
             manufacture_id = message.data[1]
             if manufacture_id != 0x43:
                 OkdPTrackMidiDevice.__logger.warning(
-                    f"Unknown manufacture ID detected. manufacture_id={manufacture_id}"
+                    f"Unknown manufacture ID detected. manufacture_id={hex(manufacture_id)}"
                 )
                 continue
             if message.data[2] & 0x10 != 0x10:
@@ -116,6 +117,7 @@ class OkdPTrackMidiDevice(NamedTuple):
         volume = self.memory[0x801B + (entry_index << 7)]
         pan = self.memory[0x801E + (entry_index << 7)]
         bend_pitch_control = self.memory[0x8041 + (entry_index << 7)]
+        portamento = self.memory[0x805f + (entry_index << 7)]
         return OkdPTrackMidiDeviceStatusMidiParameterChange(
             bank_select_msb,
             bank_select_lsb,
@@ -123,6 +125,7 @@ class OkdPTrackMidiDevice(NamedTuple):
             volume,
             pan,
             bend_pitch_control,
+            portamento,
         )
 
     memory: list[int]
