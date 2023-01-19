@@ -56,7 +56,7 @@ class OkdExtendedPTrackInfoEntry(NamedTuple):
         for channel in range(16):
             channel_info.append(OkdExtendedPTrackInfoChannelInfoEntry.read(stream))
 
-        system_ex_port: int = stream.read("uintle:16")
+        system_ex_ports: int = stream.read("uintbe:16")
         reserved_2: int = stream.read("uintbe:16")
 
         return OkdExtendedPTrackInfoEntry(
@@ -66,7 +66,7 @@ class OkdExtendedPTrackInfoEntry(NamedTuple):
             single_channel_groups,
             channel_groups,
             channel_info,
-            system_ex_port,
+            system_ex_ports,
             reserved_2,
         )
 
@@ -76,7 +76,7 @@ class OkdExtendedPTrackInfoEntry(NamedTuple):
     single_channel_groups: list[int]
     channel_groups: list[int]
     channel_info: list[OkdExtendedPTrackInfoChannelInfoEntry]
-    system_ex_port: int
+    system_ex_ports: int
     reserved_2: int
 
 
