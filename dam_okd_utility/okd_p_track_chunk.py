@@ -20,6 +20,8 @@ class OkdPTrackChunk(NamedTuple):
     @staticmethod
     def read(stream: bitstring.BitStream):
         messages = OkdPTrackMidi.read(stream)
+        # for messsage in messages:
+        #     print(f'MSG: {messsage.data.hex(" ")}')
         return OkdPTrackChunk(messages)
 
     @staticmethod
@@ -192,7 +194,7 @@ class OkdPTrackChunk(NamedTuple):
             json_track.append(
                 {
                     "delta_time": message.delta_time,
-                    "data_hex": message.data.hex(),
+                    "data_hex": message.data.hex(" "),
                     "duration": message.duration,
                 }
             )

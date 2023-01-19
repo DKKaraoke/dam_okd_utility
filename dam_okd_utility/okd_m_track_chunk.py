@@ -22,7 +22,7 @@ class OkdMTrackChunk(NamedTuple):
             json_track.append(
                 {
                     "delta_time": message.delta_time,
-                    "data_hex": message.data.hex(),
+                    "data_hex": message.data.hex(" "),
                     "duration": message.duration,
                 }
             )
