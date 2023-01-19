@@ -158,7 +158,7 @@ class OkdPTrackChunk(NamedTuple):
                             control=0x41,
                             value=0x00
                             if midi_parameter_change.portamento == 0x00
-                            else 0x40,
+                            else 0x7f,
                         )
                     )
 
