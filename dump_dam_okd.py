@@ -3,7 +3,6 @@
 
 import argparse
 import io
-import mido
 import os
 import simplejson
 
