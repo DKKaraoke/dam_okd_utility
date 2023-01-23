@@ -278,9 +278,8 @@ class OkdPTrackMidi:
                     track_number = (
                         track_info_entry[0] * OkdPTrackMidi.CHANNEL_COUNT_PER_PORT
                     )
-                    # track_number = track_info_entry[0] % 2
-                    # if track_number == 0:
 
+                    # Setup tracks
                     general_midi_messages = (
                         midi_device.get_general_midi_track_setup_messages(
                             port, tracks_per_sysex_track
