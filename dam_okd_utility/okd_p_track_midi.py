@@ -5,7 +5,9 @@ from dam_okd_utility.okd_midi import (
     read_status_byte,
     is_data_bytes,
     read_variable_int,
+    write_variable_int,
     read_extended_variable_int,
+    write_extended_variable_int,
     OkdMidiGenericMessage,
     OkdMidiMessage,
 )
@@ -408,3 +410,13 @@ class OkdPTrackMidi:
                 pass
 
         return track
+
+    @staticmethod
+    def write(stream: bitstring.BitStream, track: list[OkdMidiMessage]):
+        for message in track:
+            status_byte = message.data[0]
+            status_type = status_byte & 0xF0
+            write_extended_variable_int(stream, message.delta_time)
+            stream.append(message.data)
+            if status_type == 0x80 or status_type == 0x90:
+                write_variable_int(message.duration)

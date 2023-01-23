@@ -9,13 +9,14 @@ from dam_okd_utility.okd_midi import (
     OkdMidiGenericMessage,
     OkdMidiMessage,
 )
+from dam_okd_utility.okd_m_track_midi_data import OkdMTrackAbsoluteTimeMessage
 
 
 class OkdMTrackMidi:
     __logger = getLogger("OkdMTrackMidi")
 
     @staticmethod
-    def to_absolute_track(track: list[OkdMidiMessage]):
+    def relative_time_track_to_absolute_time_track(track: list[OkdMidiMessage]):
         absolute_track: list[tuple[int, OkdMidiMessage]] = []
         absolute_time = 0
         for message in track:
@@ -23,7 +24,7 @@ class OkdMTrackMidi:
                 absolute_time += message.delta_time
 
                 absolute_track.append(
-                    (absolute_time, OkdMidiGenericMessage(0, message.data, 0))
+                    OkdMTrackAbsoluteTimeMessage(absolute_time, message.data)
                 )
 
         return absolute_track

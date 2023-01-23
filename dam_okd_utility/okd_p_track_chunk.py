@@ -22,6 +22,9 @@ class OkdPTrackChunk(NamedTuple):
         messages = OkdPTrackMidi.read(stream)
         return OkdPTrackChunk(messages)
 
+    def write(self, stream: bitstring.BitStream):
+        OkdPTrackMidi.write(stream, self.messages)
+
     @staticmethod
     def to_midi(
         track_info: list[OkdPTrackInfoEntry] | list[OkdExtendedPTrackInfoEntry],
