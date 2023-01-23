@@ -5,6 +5,7 @@ from dam_okd_utility.okd_midi import (
     read_status_byte,
     is_data_bytes,
     read_extended_variable_int,
+    write_extended_variable_int,
     OkdMidiGenericMessage,
     OkdMidiMessage,
 )
@@ -88,9 +89,7 @@ class OkdMTrackMidi:
                     )
                     continue
 
-                track.append(
-                    OkdMidiGenericMessage(delta_time, message_buffer, 0)
-                )
+                track.append(OkdMidiGenericMessage(delta_time, message_buffer, 0))
 
             except bitstring.ReadError:
                 OkdMTrackMidi.__logger.warning(f"Reached to end of stream.")
@@ -103,3 +102,9 @@ class OkdMTrackMidi:
                 pass
 
         return track
+
+    @staticmethod
+    def write(stream: bitstring.BitStream, track: list[OkdMidiMessage]):
+        for message in track:
+            write_extended_variable_int(stream, message.delta_time)
+            stream.append(message.data)

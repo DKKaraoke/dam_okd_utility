@@ -24,9 +24,14 @@ class OkdAdpcmChunk(NamedTuple):
                 chunk_data: bytes = stream.read(8 * chunk_size).bytes
                 adpcms.append(chunk_data)
             else:
-                chunk_data: bytes = stream.read('bytes')
+                chunk_data: bytes = stream.read("bytes")
                 adpcms.append(chunk_data)
 
         return OkdAdpcmChunk(adpcms)
+
+    def write(self, stream: bitstring.BitStream):
+        for adpcm in self.adpcms:
+            stream.append(bitstring.pack("uintbe:32", len(adpcm)))
+            stream.append(adpcm)
 
     adpcms: list[bytes]

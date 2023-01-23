@@ -16,6 +16,9 @@ class OkdMTrackChunk(NamedTuple):
         messages = OkdMTrackMidi.read(stream)
         return OkdMTrackChunk(messages)
 
+    def write(self, stream: bitstring.BitStream):
+        OkdMTrackMidi.write(stream, self.messages)
+
     def to_json_serializable(self):
         json_track = []
         for message in self.messages:

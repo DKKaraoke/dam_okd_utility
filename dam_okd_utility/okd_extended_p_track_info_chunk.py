@@ -24,6 +24,13 @@ class OkdExtendedPTrackInfoChannelInfoEntry(NamedTuple):
     def is_guide_melody(self):
         return self.attribute & 0x0100 == 0x0100
 
+    def write(self, stream: bitstring.BitStream):
+        stream.append(bitstring.pack("uintle:16", self.attribute))
+        stream.append(bitstring.pack("uintbe:16", self.ports))
+        stream.append(bitstring.pack("uintbe:16", self.reserved))
+        stream.append(bitstring.pack("uint:8", self.control_change_ax))
+        stream.append(bitstring.pack("uint:8", self.control_change_cx))
+
     attribute: int
     ports: int
     reserved: int
@@ -44,13 +51,11 @@ class OkdExtendedPTrackInfoEntry(NamedTuple):
 
         single_channel_groups: list[int] = []
         for channel in range(16):
-            single_channel_group: int = stream.read("uintbe:16")
-            single_channel_groups.append(single_channel_group)
+            single_channel_groups.append(stream.read("uintbe:16"))
 
         channel_groups: list[int] = []
         for channel in range(16):
-            channel_group: int = stream.read("uintbe:16")
-            channel_groups.append(channel_group)
+            channel_groups.append(stream.read("uintbe:16"))
 
         channel_info: list[int] = []
         for channel in range(16):
@@ -69,6 +74,19 @@ class OkdExtendedPTrackInfoEntry(NamedTuple):
             system_ex_ports,
             reserved_2,
         )
+
+    def write(self, stream: bitstring.BitStream):
+        stream.append(bitstring.pack("uint:8", self.track_number))
+        stream.append(bitstring.pack("uint:8", self.track_status))
+        stream.append(bitstring.pack("uintbe:16", self.reserved_1))
+        for single_channel_group in self.single_channel_groups:
+            stream.append(bitstring.pack("uintbe:16", single_channel_group))
+        for channel_group in self.channel_groups:
+            stream.append(bitstring.pack("uintbe:16", channel_group))
+        for channel_info_entry in self.channel_info:
+            channel_info_entry.write(stream)
+        stream.append(bitstring.pack("uintbe:16", self.system_ex_ports))
+        stream.append(bitstring.pack("uintbe:16", self.reserved_2))
 
     track_number: int
     track_status: int
@@ -90,12 +108,20 @@ class OkdExtendedPTrackInfoChunk(NamedTuple):
         # Skip unknown
         stream.bytepos += 8
         tg_mode = stream.read("uintbe:16")
-        data: list[OkdExtendedPTrackInfoEntry] = []
         entry_count = stream.read("uintbe:16")
+        data: list[OkdExtendedPTrackInfoEntry] = []
         for _ in range(entry_count):
             entry = OkdExtendedPTrackInfoEntry.read(stream)
             data.append(entry)
         return OkdExtendedPTrackInfoChunk(tg_mode, data)
+
+    def write(self, stream: bitstring.BitStream):
+        # Skip unknown
+        stream.bytepos += 8
+        stream.append(bitstring.pack("uintbe:16", self.tg_mode))
+        stream.append(bitstring.pack("uintbe:16", len(self.data)))
+        for entry in self.data:
+            entry.write(stream)
 
     tg_mode: int
     data: list[OkdExtendedPTrackInfoEntry]

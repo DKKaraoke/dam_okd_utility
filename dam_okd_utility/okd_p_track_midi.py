@@ -1,5 +1,4 @@
 import bitstring
-from typing import NamedTuple
 
 from dam_okd_utility.customized_logger import getLogger
 from dam_okd_utility.okd_midi import (
@@ -16,13 +15,8 @@ from dam_okd_utility.okd_p_track_info_chunk import (
 from dam_okd_utility.okd_extended_p_track_info_chunk import (
     OkdExtendedPTrackInfoEntry,
 )
-
-
-class OkdPTrackAbsoluteTrackMessage(NamedTuple):
-    time: int
-    port: int
-    track: int
-    data: bytes
+from dam_okd_utility.okd_p_track_midi_data import OkdPTrackAbsoluteTimeMessage
+from dam_okd_utility.yamaha_mmt_tg import YamahaMmtTg
 
 
 class OkdPTrackMidi:
@@ -33,7 +27,7 @@ class OkdPTrackMidi:
     __logger = getLogger("OkdPTrackMidi")
 
     @staticmethod
-    def __message_to_absolute(
+    def __relocate_message(
         track_info_entry: OkdPTrackInfoEntry | OkdExtendedPTrackInfoEntry,
         time: int,
         data: bytes,
@@ -47,19 +41,24 @@ class OkdPTrackMidi:
             status_byte = data[0]
             status_type = status_byte & 0xF0
 
-        if status_type == 0xF0:
-            return []
-            # return [
-            #     OkdPTrackAbsoluteTrackMessage(
-            #         time,
-            #         track_info_entry.system_ex_port,
-            #         OkdPTrackMidi.CHANNEL_COUNT_PER_PORT * track_number,
-            #         data,
-            #     )
-            # ]
-        else:
-            absolute_messages: list[OkdPTrackAbsoluteTrackMessage] = []
+        absolute_messages: list[OkdPTrackAbsoluteTimeMessage] = []
 
+        if status_type == 0xF0:
+            if status_byte == 0xF0:
+                for port in range(OkdPTrackMidi.PORT_COUNT):
+                    if (track_info_entry.system_ex_ports >> port) & 0x0001 != 0x0001:
+                        continue
+
+                    track = port * OkdPTrackMidi.CHANNEL_COUNT_PER_PORT
+                    absolute_messages.append(
+                        OkdPTrackAbsoluteTimeMessage(
+                            time,
+                            port,
+                            track,
+                            data,
+                        )
+                    )
+        else:
             channel = status_byte & 0x0F
             channel_info_entry = track_info_entry.channel_info[channel]
 
@@ -92,24 +91,24 @@ class OkdPTrackMidi:
                         + data[1:]
                     )
                     absolute_messages.append(
-                        OkdPTrackAbsoluteTrackMessage(
+                        OkdPTrackAbsoluteTimeMessage(
                             time, port, track, absolute_message_data
                         )
                     )
 
-            return absolute_messages
+        return absolute_messages
 
     @staticmethod
-    def __one_track_to_absolute(
+    def __relative_time_track_to_absolute_time_track(
         track_info_entry: OkdPTrackInfoEntry | OkdExtendedPTrackInfoEntry,
-        track: list[OkdMidiMessage],
+        relative_time_track: list[OkdMidiMessage],
     ):
         is_lossless_track = track_info_entry.track_status & 0x08
 
-        absolute_track: list[OkdPTrackAbsoluteTrackMessage] = []
+        absolute_time_track: list[OkdPTrackAbsoluteTimeMessage] = []
         absolute_time = 0
         is_channel_group_enabled = False
-        for message in track:
+        for message in relative_time_track:
             if not isinstance(message, OkdMidiGenericMessage):
                 continue
 
@@ -131,8 +130,8 @@ class OkdPTrackMidi:
                 note_on_bytearray[0] = 0x90 | channel
                 note_on_bytearray[1] = note_number
                 note_on_bytearray[2] = note_on_velocity
-                absolute_track.extend(
-                    OkdPTrackMidi.__message_to_absolute(
+                absolute_time_track.extend(
+                    OkdPTrackMidi.__relocate_message(
                         track_info_entry,
                         absolute_time,
                         bytes(note_on_bytearray),
@@ -144,8 +143,8 @@ class OkdPTrackMidi:
                 note_off_bytearray[0] = 0x80 | channel
                 note_off_bytearray[1] = note_number
                 note_off_bytearray[2] = note_off_velocity
-                absolute_track.extend(
-                    OkdPTrackMidi.__message_to_absolute(
+                absolute_time_track.extend(
+                    OkdPTrackMidi.__relocate_message(
                         track_info_entry,
                         absolute_time + duration,
                         bytes(note_off_bytearray),
@@ -160,8 +159,8 @@ class OkdPTrackMidi:
                 if not is_lossless_track:
                     duration <<= 2
 
-                absolute_track.extend(
-                    OkdPTrackMidi.__message_to_absolute(
+                absolute_time_track.extend(
+                    OkdPTrackMidi.__relocate_message(
                         track_info_entry,
                         absolute_time,
                         bytes(message.data),
@@ -173,8 +172,8 @@ class OkdPTrackMidi:
                 note_off_bytearray[0] = 0x80 | channel
                 note_off_bytearray[1] = note_number
                 note_off_bytearray[2] = 0x40
-                absolute_track.extend(
-                    OkdPTrackMidi.__message_to_absolute(
+                absolute_time_track.extend(
+                    OkdPTrackMidi.__relocate_message(
                         track_info_entry,
                         absolute_time + duration,
                         bytes(note_off_bytearray),
@@ -190,8 +189,8 @@ class OkdPTrackMidi:
                 message_data_bytearray[0] = 0xB0 | channel
                 message_data_bytearray[1] = channel_info_entry.control_change_ax
                 message_data_bytearray[2] = message.data[1]
-                absolute_track.extend(
-                    OkdPTrackMidi.__message_to_absolute(
+                absolute_time_track.extend(
+                    OkdPTrackMidi.__relocate_message(
                         track_info_entry,
                         absolute_time,
                         bytes(message_data_bytearray),
@@ -207,8 +206,8 @@ class OkdPTrackMidi:
                 message_data_bytearray[0] = 0xB0 | channel
                 message_data_bytearray[1] = channel_info_entry.control_change_cx
                 message_data_bytearray[2] = message.data[1]
-                absolute_track.extend(
-                    OkdPTrackMidi.__message_to_absolute(
+                absolute_time_track.extend(
+                    OkdPTrackMidi.__relocate_message(
                         track_info_entry,
                         absolute_time,
                         bytes(message_data_bytearray),
@@ -216,8 +215,8 @@ class OkdPTrackMidi:
                     )
                 )
             else:
-                absolute_track.extend(
-                    OkdPTrackMidi.__message_to_absolute(
+                absolute_time_track.extend(
+                    OkdPTrackMidi.__relocate_message(
                         track_info_entry,
                         absolute_time,
                         bytes(message.data),
@@ -230,40 +229,79 @@ class OkdPTrackMidi:
             else:
                 is_channel_group_enabled = False
 
-        return absolute_track
+        absolute_time_track.sort(key=lambda absolute_message: absolute_message.time)
+
+        return absolute_time_track
 
     @staticmethod
-    def to_absolute(
-        tracks: list[tuple[int, list[OkdMidiMessage]]],
+    def relative_time_tracks_to_absolute_time_tracks(
         track_info: list[OkdPTrackInfoEntry] | list[OkdExtendedPTrackInfoEntry],
+        relative_time_tracks: list[tuple[int, list[OkdMidiMessage]]],
+        general_midi: bool,
     ):
-        merged_absolute_track: list[OkdPTrackAbsoluteTrackMessage] = []
-        # midi_device: OkdPTrackMidiDevice | None = None
-        for track_number, track in tracks:
-            # loaded_midi_device = OkdPTrackMidiDevice.load_from_sysex_messages(track)
-            # if loaded_midi_device is not None:
-            #     midi_device = loaded_midi_device
-
-            # if midi_device is None:
-            #     raise ValueError("P-Track MIDI device is not loaded.")
-
-            track_info_entry: OkdPTrackInfoEntry | OkdExtendedPTrackInfoEntry | None = (
-                None
-            )
-            for entry in track_info:
-                if entry.track_number == track_number:
-                    track_info_entry = entry
+        merged_absolute_time_track: list[OkdPTrackAbsoluteTimeMessage] = []
+        relative_time_track_count = len(relative_time_tracks)
+        for p_track_chunk_number, relative_time_track in relative_time_tracks:
+            track_info_entry: tuple[
+                int, OkdPTrackInfoEntry | OkdExtendedPTrackInfoEntry
+            ] | None = None
+            for index, entry in enumerate(track_info):
+                if entry.track_number == p_track_chunk_number:
+                    track_info_entry = (index, entry)
             if track_info_entry is None:
                 raise ValueError("P-Track Information Entry not found.")
 
-            absolute_track = OkdPTrackMidi.__one_track_to_absolute(
-                track_info_entry, track
+            absolute_time_track = (
+                OkdPTrackMidi.__relative_time_track_to_absolute_time_track(
+                    track_info_entry[1], relative_time_track
+                )
             )
-            merged_absolute_track.extend(absolute_track)
+            merged_absolute_time_track.extend(absolute_time_track)
 
-        merged_absolute_track.sort(key=lambda absolute_message: absolute_message.time)
+            if general_midi:
+                is_sysex_track = False
+                tracks_per_sysex_track = OkdPTrackMidi.CHANNEL_COUNT_PER_PORT
+                if relative_time_track_count <= 2:
+                    is_sysex_track = True
+                else:
+                    if track_info_entry[0] % 2 == 0:
+                        is_sysex_track = True
+                        tracks_per_sysex_track = (
+                            OkdPTrackMidi.CHANNEL_COUNT_PER_PORT * 2
+                        )
 
-        return merged_absolute_track
+                if is_sysex_track:
+                    midi_device = YamahaMmtTg()
+                    port = track_info_entry[0]
+                    track_number = (
+                        track_info_entry[0] * OkdPTrackMidi.CHANNEL_COUNT_PER_PORT
+                    )
+                    # track_number = track_info_entry[0] % 2
+                    # if track_number == 0:
+
+                    general_midi_messages = (
+                        midi_device.get_general_midi_track_setup_messages(
+                            port, tracks_per_sysex_track
+                        )
+                    )
+                    merged_absolute_time_track.extend(general_midi_messages)
+
+                    # SysEx messages to GM messages
+                    general_midi_messages = (
+                        midi_device.sysex_messages_to_general_midi_messages(
+                            port,
+                            track_number,
+                            tracks_per_sysex_track,
+                            absolute_time_track,
+                        )
+                    )
+                    merged_absolute_time_track.extend(general_midi_messages)
+
+        merged_absolute_time_track.sort(
+            key=lambda absolute_time_message: absolute_time_message.time
+        )
+
+        return merged_absolute_time_track
 
     @staticmethod
     def read(stream: bitstring.BitStream):

@@ -122,7 +122,7 @@ class DamOkdDumper:
                         output_file.write(adpcm)
 
         output_path = os.path.join(directory_path, "p_track.mid")
-        p_track_midi = OkdPTrackChunk.to_midi(p_tracks, p_track_info)
+        p_track_midi = OkdPTrackChunk.to_midi(p_track_info, p_tracks)
         p_track_midi.save(output_path)
 
 
