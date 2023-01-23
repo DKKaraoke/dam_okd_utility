@@ -698,7 +698,7 @@ class YamahaMmtTg:
                     midi_message = mido.Message(
                         "control_change",
                         channel=channel,
-                        control=0x64,
+                        control=0x46,
                         value=value,
                     )
                     midi_message_data = bytes(midi_message.bin())
@@ -945,7 +945,7 @@ class YamahaMmtTg:
                     midi_message = mido.Message(
                         "control_change",
                         channel=channel,
-                        control=0x64,
+                        control=0x46,
                         value=value,
                     )
                     midi_message_data = bytes(midi_message.bin())
