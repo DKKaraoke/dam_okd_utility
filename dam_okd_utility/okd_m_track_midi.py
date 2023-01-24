@@ -17,7 +17,7 @@ class OkdMTrackMidi:
 
     @staticmethod
     def relative_time_track_to_absolute_time_track(track: list[OkdMidiMessage]):
-        absolute_track: list[tuple[int, OkdMidiMessage]] = []
+        absolute_track: list[OkdMTrackAbsoluteTimeMessage] = []
         absolute_time = 0
         for message in track:
             if isinstance(message, OkdMidiGenericMessage):
