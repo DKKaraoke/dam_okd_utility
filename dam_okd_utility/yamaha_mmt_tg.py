@@ -606,33 +606,33 @@ class YamahaMmtTg:
                 part_number
             )
             for key, value in multi_part_entry._asdict().items():
-                if key == "bank_select_msb":
-                    midi_message = mido.Message(
-                        "control_change",
-                        channel=channel,
-                        control=0x00,
-                        value=value,
-                    )
-                    midi_message_data = bytes(midi_message.bin())
-                    general_midi_messages.append(
-                        OkdPTrackAbsoluteTimeMessage(
-                            0, port, track_number, midi_message_data
-                        ),
-                    )
-                elif key == "bank_select_lsb":
-                    midi_message = mido.Message(
-                        "control_change",
-                        channel=channel,
-                        control=0x20,
-                        value=value,
-                    )
-                    midi_message_data = bytes(midi_message.bin())
-                    general_midi_messages.append(
-                        OkdPTrackAbsoluteTimeMessage(
-                            0, port, track_number, midi_message_data
-                        ),
-                    )
-                elif key == "program_number":
+                # if key == "bank_select_msb":
+                #     midi_message = mido.Message(
+                #         "control_change",
+                #         channel=channel,
+                #         control=0x00,
+                #         value=value,
+                #     )
+                #     midi_message_data = bytes(midi_message.bin())
+                #     general_midi_messages.append(
+                #         OkdPTrackAbsoluteTimeMessage(
+                #             0, port, track_number, midi_message_data
+                #         ),
+                #     )
+                # elif key == "bank_select_lsb":
+                #     midi_message = mido.Message(
+                #         "control_change",
+                #         channel=channel,
+                #         control=0x20,
+                #         value=value,
+                #     )
+                #     midi_message_data = bytes(midi_message.bin())
+                #     general_midi_messages.append(
+                #         OkdPTrackAbsoluteTimeMessage(
+                #             0, port, track_number, midi_message_data
+                #         ),
+                #     )
+                if key == "program_number":
                     midi_message = mido.Message(
                         "program_change", channel=channel, program=value
                     )
@@ -853,33 +853,33 @@ class YamahaMmtTg:
             track_number = sysex_track_number + part_number
             channel = part_number % YamahaMmtTg.CHANNEL_COUNT_PER_PORT
             for key, value in multi_part_entry_difference:
-                if key == "bank_select_msb":
-                    midi_message = mido.Message(
-                        "control_change",
-                        channel=channel,
-                        control=0x00,
-                        value=value,
-                    )
-                    midi_message_data = bytes(midi_message.bin())
-                    general_midi_messages.append(
-                        OkdPTrackAbsoluteTimeMessage(
-                            message.time, sysex_port, track_number, midi_message_data
-                        ),
-                    )
-                elif key == "bank_select_lsb":
-                    midi_message = mido.Message(
-                        "control_change",
-                        channel=channel,
-                        control=0x20,
-                        value=value,
-                    )
-                    midi_message_data = bytes(midi_message.bin())
-                    general_midi_messages.append(
-                        OkdPTrackAbsoluteTimeMessage(
-                            message.time, sysex_port, track_number, midi_message_data
-                        ),
-                    )
-                elif key == "program_number":
+                # if key == "bank_select_msb":
+                #     midi_message = mido.Message(
+                #         "control_change",
+                #         channel=channel,
+                #         control=0x00,
+                #         value=value,
+                #     )
+                #     midi_message_data = bytes(midi_message.bin())
+                #     general_midi_messages.append(
+                #         OkdPTrackAbsoluteTimeMessage(
+                #             message.time, sysex_port, track_number, midi_message_data
+                #         ),
+                #     )
+                # elif key == "bank_select_lsb":
+                #     midi_message = mido.Message(
+                #         "control_change",
+                #         channel=channel,
+                #         control=0x20,
+                #         value=value,
+                #     )
+                #     midi_message_data = bytes(midi_message.bin())
+                #     general_midi_messages.append(
+                #         OkdPTrackAbsoluteTimeMessage(
+                #             message.time, sysex_port, track_number, midi_message_data
+                #         ),
+                #     )
+                if key == "program_number":
                     midi_message = mido.Message(
                         "program_change", channel=channel, program=value
                     )
