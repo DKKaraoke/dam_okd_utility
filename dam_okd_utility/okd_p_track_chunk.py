@@ -26,6 +26,11 @@ class OkdPTrackChunk(NamedTuple):
         OkdPTrackMidi.write(stream, self.messages)
 
     @staticmethod
+    def from_midi(midi: mido.MidiFile):
+        messages = OkdPTrackMidi.midi_to_relative_time_track(midi)
+        return OkdPTrackChunk(messages)
+
+    @staticmethod
     def to_midi(
         track_info: list[OkdPTrackInfoEntry] | list[OkdExtendedPTrackInfoEntry],
         relative_time_tracks: list[tuple[int, list[OkdMidiMessage]]],

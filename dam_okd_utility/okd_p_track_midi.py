@@ -1,4 +1,5 @@
 import bitstring
+import mido
 
 from dam_okd_utility.customized_logger import getLogger
 from dam_okd_utility.okd_midi import (
@@ -409,6 +410,110 @@ class OkdPTrackMidi:
                 pass
 
         return track
+
+    @staticmethod
+    def __get_midi_tempo(midi: mido.MidiFile):
+        for track in midi.tracks:
+            for midi_message in track:
+                if midi_message.type == "set_tempo":
+                    return midi_message.tempo
+
+        return 500000
+
+    @staticmethod
+    def __midi_to_absolute_time_track(midi: mido.MidiFile):
+        midi_tempo = OkdPTrackMidi.__get_midi_tempo(midi)
+        tempo_conversion_ratio = 125.0 / mido.tempo2bpm(midi_tempo)
+
+        absolute_time_track: list[OkdPTrackAbsoluteTimeMessage] = []
+        for midi_track_index, midi_track in enumerate(midi.tracks):
+            absolute_time = 0
+            for midi_message in midi_track:
+                absolute_time += midi_message.time
+
+                midi_message_data = bytes(midi_message.bin())
+                absolute_time_track.append(
+                    OkdPTrackAbsoluteTimeMessage(
+                        round(absolute_time * tempo_conversion_ratio),
+                        0,
+                        midi_track_index,
+                        midi_message_data,
+                    )
+                )
+
+        absolute_time_track.sort(
+            key=lambda absolute_time_message: absolute_time_message.time
+        )
+
+        return absolute_time_track
+
+    @staticmethod
+    def __absolute_time_track_to_relative_time_track(
+        absolute_time_track: list[OkdPTrackAbsoluteTimeMessage],
+    ):
+        relative_time_track: list[OkdMidiMessage] = []
+        absolute_time_track_length = len(absolute_time_track)
+        last_time = 0
+        for absolute_time_message_index, absolute_time_message in enumerate(
+            absolute_time_track
+        ):
+            status_byte = absolute_time_message.data[0]
+            status_type = status_byte & 0xF0
+            delta_time = absolute_time_message.time - last_time
+
+            if status_type == 0x80:
+                # Do nothing
+                pass
+            elif status_type == 0x90:
+                channel = status_byte & 0x0F
+                note_number = absolute_time_message.data[1]
+                note_off_time = absolute_time_message.time
+                for i in range(absolute_time_message_index, absolute_time_track_length):
+                    note_off_message = absolute_time_track[i]
+                    note_off_message_status_byte = note_off_message.data[0]
+                    note_off_message_status_type = note_off_message_status_byte & 0xF0
+                    note_off_message_channel = status_byte & 0x0F
+                    if note_off_message_status_type == 0x80 and note_off_message_channel == channel:
+                        note_off_message_note_number = note_off_message.data[1]
+                        if note_off_message_note_number == note_number:
+                            note_off_time = note_off_message.time
+                            break
+                duration = note_off_time - absolute_time_message.time
+                relative_time_track.append(
+                    OkdMidiGenericMessage(
+                        delta_time,
+                        absolute_time_message.data,
+                        duration,
+                    )
+                )
+            elif status_type == 0xA0 or status_type == 0xC0:
+                message_data = b"\xFE" + absolute_time_message.data
+                relative_time_track.append(
+                    OkdMidiGenericMessage(
+                        delta_time,
+                        message_data,
+                        0,
+                    )
+                )
+            else:
+                relative_time_track.append(
+                    OkdMidiGenericMessage(
+                        delta_time,
+                        absolute_time_message.data,
+                        0,
+                    )
+                )
+
+            last_time = absolute_time_message.time
+
+        return relative_time_track
+
+    @staticmethod
+    def midi_to_relative_time_track(midi: mido.MidiFile):
+        absolute_time_track = OkdPTrackMidi.__midi_to_absolute_time_track(midi)
+        return OkdPTrackMidi.__absolute_time_track_to_relative_time_track(
+            absolute_time_track
+        )
 
     @staticmethod
     def write(stream: bitstring.BitStream, track: list[OkdMidiMessage]):
