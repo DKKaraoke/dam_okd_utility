@@ -12,9 +12,9 @@ class OkdMTrackChunk(NamedTuple):
     __logger = getLogger("OkdMTrackChunk")
 
     @staticmethod
-    def read(stream: bitstring.BitStream):
+    def read(stream: bitstring.BitStream, chunk_number: int):
         messages = OkdMTrackMidi.read(stream)
-        return OkdMTrackChunk(messages)
+        return OkdMTrackChunk(chunk_number, messages)
 
     def write(self, stream: bitstring.BitStream):
         OkdMTrackMidi.write(stream, self.messages)
@@ -31,4 +31,5 @@ class OkdMTrackChunk(NamedTuple):
             )
         return {"track": json_track}
 
+    chunk_number: int
     messages: list[OkdMidiMessage]

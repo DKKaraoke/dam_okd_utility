@@ -18,17 +18,17 @@ class OkdPTrackChunk(NamedTuple):
     __logger = getLogger("OkdPTrackChunk")
 
     @staticmethod
-    def read(stream: bitstring.BitStream):
+    def read(stream: bitstring.BitStream, chunk_number: int):
         messages = OkdPTrackMidi.read(stream)
-        return OkdPTrackChunk(messages)
+        return OkdPTrackChunk(chunk_number, messages)
 
     def write(self, stream: bitstring.BitStream):
         OkdPTrackMidi.write(stream, self.messages)
 
     @staticmethod
-    def from_midi(midi: mido.MidiFile):
+    def from_midi(midi: mido.MidiFile, chunk_number: int):
         messages = OkdPTrackMidi.midi_to_relative_time_track(midi)
-        return OkdPTrackChunk(messages)
+        return OkdPTrackChunk(chunk_number, messages)
 
     @staticmethod
     def to_midi(
@@ -98,4 +98,5 @@ class OkdPTrackChunk(NamedTuple):
             )
         return {"track": json_track}
 
+    chunk_number: int
     messages: list[OkdMidiMessage]

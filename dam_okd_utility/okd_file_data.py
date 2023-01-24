@@ -1,6 +1,14 @@
 from typing import NamedTuple, Union
 
 
+from dam_okd_utility.okd_p_track_info_chunk import OkdPTrackInfoChunk
+from dam_okd_utility.okd_extended_p_track_info_chunk import OkdExtendedPTrackInfoChunk
+from dam_okd_utility.okd_p3_track_info_chunk import OkdP3TrackInfoChunk
+from dam_okd_utility.okd_m_track_chunk import OkdMTrackChunk
+from dam_okd_utility.okd_p_track_chunk import OkdPTrackChunk
+from dam_okd_utility.okd_adpcm_chunk import OkdAdpcmChunk
+
+
 class GenericOkdHeader(NamedTuple):
     magic_bytes: bytes
     length: int
@@ -97,3 +105,14 @@ class OkaHeader(NamedTuple):
 class OkdGenericChunk(NamedTuple):
     chunk_id: bytes
     data: bytes
+
+
+OkdChunk = Union[
+    OkdGenericChunk,
+    OkdPTrackInfoChunk,
+    OkdExtendedPTrackInfoChunk,
+    OkdP3TrackInfoChunk,
+    OkdMTrackChunk,
+    OkdPTrackChunk,
+    OkdAdpcmChunk,
+]

@@ -123,5 +123,31 @@ class OkdExtendedPTrackInfoChunk(NamedTuple):
         for entry in self.data:
             entry.write(stream)
 
+    @staticmethod
+    def from_json_object(json_object: object):
+        if "attribute" in json_object:
+            return OkdExtendedPTrackInfoChannelInfoEntry(
+                json_object["attribute"],
+                json_object["ports"],
+                json_object["reserved"],
+                json_object["control_change_ax"],
+                json_object["control_change_cx"],
+            )
+        elif "track_number" in json_object:
+            return OkdExtendedPTrackInfoEntry(
+                json_object["track_number"],
+                json_object["track_status"],
+                json_object["reserved_1"],
+                json_object["single_channel_groups"],
+                json_object["channel_groups"],
+                json_object["channel_info"],
+                json_object["system_ex_ports"],
+                json_object["reserved_2"],
+            )
+        elif "data" in json_object:
+            return OkdExtendedPTrackInfoChunk(
+                json_object["tg_mode"], json_object["data"]
+            )
+
     tg_mode: int
     data: list[OkdExtendedPTrackInfoEntry]

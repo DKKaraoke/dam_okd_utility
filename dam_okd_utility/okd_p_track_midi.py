@@ -421,12 +421,21 @@ class OkdPTrackMidi:
         return 500000
 
     @staticmethod
+    def __get_midi_track_port(midi_track: mido.MidiTrack):
+        for midi_message in midi_track:
+            if midi_message.type == "midi_port":
+                return midi_message.port
+
+        return 0
+
+    @staticmethod
     def __midi_to_absolute_time_track(midi: mido.MidiFile):
         midi_tempo = OkdPTrackMidi.__get_midi_tempo(midi)
         tempo_conversion_ratio = 125.0 / mido.tempo2bpm(midi_tempo)
 
         absolute_time_track: list[OkdPTrackAbsoluteTimeMessage] = []
         for midi_track_index, midi_track in enumerate(midi.tracks):
+            port = OkdPTrackMidi.__get_midi_track_port(midi_track)
             absolute_time = 0
             for midi_message in midi_track:
                 absolute_time += midi_message.time
@@ -435,7 +444,7 @@ class OkdPTrackMidi:
                 absolute_time_track.append(
                     OkdPTrackAbsoluteTimeMessage(
                         round(absolute_time * tempo_conversion_ratio),
-                        0,
+                        port,
                         midi_track_index,
                         midi_message_data,
                     )
@@ -473,7 +482,10 @@ class OkdPTrackMidi:
                     note_off_message_status_byte = note_off_message.data[0]
                     note_off_message_status_type = note_off_message_status_byte & 0xF0
                     note_off_message_channel = status_byte & 0x0F
-                    if note_off_message_status_type == 0x80 and note_off_message_channel == channel:
+                    if (
+                        note_off_message_status_type == 0x80
+                        and note_off_message_channel == channel
+                    ):
                         note_off_message_note_number = note_off_message.data[1]
                         if note_off_message_note_number == note_number:
                             note_off_time = note_off_message.time
@@ -495,6 +507,15 @@ class OkdPTrackMidi:
                         0,
                     )
                 )
+            elif status_type == 0xF0:
+                if status_byte == 0xF0:
+                    relative_time_track.append(
+                        OkdMidiGenericMessage(
+                            delta_time,
+                            absolute_time_message.data,
+                            0,
+                        )
+                    )
             else:
                 relative_time_track.append(
                     OkdMidiGenericMessage(
@@ -523,4 +544,4 @@ class OkdPTrackMidi:
             write_extended_variable_int(stream, message.delta_time)
             stream.append(message.data)
             if status_type == 0x80 or status_type == 0x90:
-                write_variable_int(message.duration)
+                write_variable_int(stream, message.duration)

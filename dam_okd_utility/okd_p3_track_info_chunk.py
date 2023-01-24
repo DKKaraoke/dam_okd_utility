@@ -4,8 +4,8 @@ from typing import NamedTuple
 from dam_okd_utility.customized_logger import getLogger
 
 
-class OkdPTrackInfoChannelInfoEntry(NamedTuple):
-    """DAM OKD P-Track Information Channel Information Entry"""
+class OkdP3TrackInfoChannelInfoEntry(NamedTuple):
+    """DAM OKD P3-Track Information Channel Information Entry"""
 
     @staticmethod
     def read(stream: bitstring.BitStream):
@@ -13,7 +13,7 @@ class OkdPTrackInfoChannelInfoEntry(NamedTuple):
         ports: int = stream.read("uint:8") & 0x07
         control_change_ax: int = stream.read("uint:8")
         control_change_cx: int = stream.read("uint:8")
-        return OkdPTrackInfoChannelInfoEntry(
+        return OkdP3TrackInfoChannelInfoEntry(
             attribute, ports, control_change_ax, control_change_cx
         )
 
@@ -35,10 +35,10 @@ class OkdPTrackInfoChannelInfoEntry(NamedTuple):
     control_change_cx: int
 
 
-class OkdPTrackInfoEntry(NamedTuple):
-    """DAM OKD P-Track Information Entry"""
+class OkdP3TrackInfoChunk(NamedTuple):
+    """DAM OKD P3-Track Information Chunk"""
 
-    __logger = getLogger("OkdPTrackInfoEntry")
+    __logger = getLogger("OkdP3TrackInfoEntry")
 
     @staticmethod
     def read(stream: bitstring.BitStream):
@@ -59,11 +59,11 @@ class OkdPTrackInfoEntry(NamedTuple):
 
         channel_info: list[int] = []
         for channel in range(16):
-            channel_info.append(OkdPTrackInfoChannelInfoEntry.read(stream))
+            channel_info.append(OkdP3TrackInfoChannelInfoEntry.read(stream))
 
         system_ex_ports: int = stream.read("uintle:16")
 
-        return OkdPTrackInfoEntry(
+        return OkdP3TrackInfoChunk(
             track_number,
             track_status,
             use_channel_group_flag,
@@ -86,40 +86,17 @@ class OkdPTrackInfoEntry(NamedTuple):
             channel_info_entry.write(stream)
         stream.append(bitstring.pack("uintle:16", self.system_ex_ports))
 
-    track_number: int
-    track_status: int
-    use_channel_group_flag: int
-    single_channel_groups: list[int]
-    channel_groups: list[int]
-    channel_info: list[OkdPTrackInfoChannelInfoEntry]
-    system_ex_ports: int
-
-
-class OkdPTrackInfoChunk(NamedTuple):
-    """DAM OKD P-Track Information Chunk"""
-
-    __logger = getLogger("OkdPTrackInfoChunk")
-
-    @staticmethod
-    def read(stream: bitstring.BitStream):
-        p_track_info: list[OkdPTrackInfoEntry] = []
-        entry_count = stream.read("uintbe:16")
-        for _ in range(entry_count):
-            entry = OkdPTrackInfoEntry.read(stream)
-            p_track_info.append(entry)
-        return OkdPTrackInfoChunk(p_track_info)
-
     @staticmethod
     def from_json_object(json_object: object):
         if "attribute" in json_object:
-            return OkdPTrackInfoChannelInfoEntry(
+            return OkdP3TrackInfoChannelInfoEntry(
                 json_object["attribute"],
                 json_object["ports"],
                 json_object["control_change_ax"],
                 json_object["control_change_cx"],
             )
         elif "track_number" in json_object:
-            return OkdPTrackInfoEntry(
+            return OkdP3TrackInfoChunk(
                 json_object["track_number"],
                 json_object["track_status"],
                 json_object["use_channel_group_flag"],
@@ -128,13 +105,11 @@ class OkdPTrackInfoChunk(NamedTuple):
                 json_object["channel_info"],
                 json_object["system_ex_ports"],
             )
-        elif "data" in json_object:
-            return OkdPTrackInfoChunk(json_object["data"])
 
-    def write(self, stream: bitstring.BitStream, multiple_entry=True):
-        if multiple_entry:
-            stream.append(bitstring.pack("uintbe:16", len(self.data)))
-        for entry in self.data:
-            entry.write(stream)
-
-    data: list[OkdPTrackInfoEntry]
+    track_number: int
+    track_status: int
+    use_channel_group_flag: int
+    single_channel_groups: list[int]
+    channel_groups: list[int]
+    channel_info: list[OkdP3TrackInfoChannelInfoEntry]
+    system_ex_ports: int

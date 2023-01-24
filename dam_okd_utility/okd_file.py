@@ -2,6 +2,7 @@ import bitstring
 from enum import Enum, auto
 import io
 import os
+import random
 
 from dam_okd_utility.customized_logger import getLogger
 from dam_okd_utility.okd_encryption_key_table import OKD_ENCRYPTION_KEY_TABLE
@@ -14,12 +15,14 @@ from dam_okd_utility.okd_file_data import (
     OkdHeader,
     OkaHeader,
     OkdGenericChunk,
+    OkdChunk,
 )
 from dam_okd_utility.okd_adpcm_chunk import OkdAdpcmChunk
 from dam_okd_utility.okd_m_track_chunk import OkdMTrackChunk
 from dam_okd_utility.okd_p_track_chunk import OkdPTrackChunk
 from dam_okd_utility.okd_p_track_info_chunk import OkdPTrackInfoChunk
 from dam_okd_utility.okd_extended_p_track_info_chunk import OkdExtendedPTrackInfoChunk
+from dam_okd_utility.okd_p3_track_info_chunk import OkdP3TrackInfoChunk
 
 
 class OkdFileType(Enum):
@@ -46,6 +49,39 @@ class OkdFile:
     """DAM OKD File"""
 
     __logger = getLogger("OkdFile")
+
+    @staticmethod
+    def __choose_encryption_key_index():
+        return random.randint(0x00, 0xFF)
+
+    @staticmethod
+    def __encrypt(
+        input_stream: io.BufferedReader,
+        output_stream: io.BufferedWriter,
+        encryption_key_index: int,
+        length: int | None = None,
+    ):
+        start_position = input_stream.tell()
+        while length is None or (
+            length is not None and (input_stream.tell() - start_position) < length
+        ):
+            plaintext_buffer = input_stream.read(2)
+            if len(plaintext_buffer) == 0:
+                break
+            if len(plaintext_buffer) != 2:
+                raise RuntimeError("Invalid plaintext_buffer length.")
+            plaintext = int.from_bytes(plaintext_buffer, byteorder="big")
+            encryption_key: int
+            if encryption_key_index is None:
+                encryption_key = 0x17D7
+            else:
+                encryption_key = OKD_ENCRYPTION_KEY_TABLE[encryption_key_index % 0x100]
+            ciphertext = plaintext ^ encryption_key
+            ciphertext_buffer = ciphertext.to_bytes(2, byteorder="big")
+            output_stream.write(ciphertext_buffer)
+            if encryption_key_index is not None:
+                encryption_key_index += 1
+        return encryption_key_index
 
     @staticmethod
     def __detect_first_encryption_key_index(
@@ -104,8 +140,9 @@ class OkdFile:
             length is not None and (input_stream.tell() - start_position) < length
         ):
             ciphertext_buffer = input_stream.read(2)
+            if len(ciphertext_buffer) == 0:
+                break
             if len(ciphertext_buffer) != 2:
-                # return
                 raise RuntimeError("Invalid ciphertext_buffer length.")
             ciphertext = int.from_bytes(ciphertext_buffer, byteorder="big")
             encryption_key: int
@@ -130,7 +167,7 @@ class OkdFile:
 
         header_buffer = plaintext_stream.read(40)
         if len(header_buffer) != 40:
-            raise RuntimeError("Incalid header_buffer length.")
+            raise RuntimeError("Invalid header_buffer length.")
 
         magic_bytes = header_buffer[0:4]
         if magic_bytes != b"YKS1":
@@ -352,7 +389,7 @@ class OkdFile:
 
         header_buffer = plaintext_stream.read(40)
         if len(header_buffer) != 40:
-            raise RuntimeError("Incalid header_buffer length.")
+            raise RuntimeError("Invalid header_buffer length.")
 
         magic_bytes = header_buffer[0:4]
         if magic_bytes != b"YOKA":
@@ -519,14 +556,84 @@ class OkdFile:
         if chunk_id == b"YPTI":
             return OkdPTrackInfoChunk.read(chunk_data_stream)
         elif chunk_id == b"YP3I":
-            return OkdPTrackInfoChunk.read(chunk_data_stream, False)
+            return OkdP3TrackInfoChunk.read(chunk_data_stream)
         elif chunk_id == b"YPXI":
             return OkdExtendedPTrackInfoChunk.read(chunk_data_stream)
         elif chunk_id[0:3] == b"\xffMR":
-            return OkdMTrackChunk.read(chunk_data_stream)
+            return OkdMTrackChunk.read(chunk_data_stream, chunk_id[3])
         elif chunk_id[0:3] == b"\xffPR":
-            return OkdPTrackChunk.read(chunk_data_stream)
+            return OkdPTrackChunk.read(chunk_data_stream, chunk_id[3])
         elif chunk_id == b"YADD":
             return OkdAdpcmChunk.read(chunk_data_stream)
 
         return OkdGenericChunk(chunk_id, chunk_data)
+
+    @staticmethod
+    def __write_okd_header(
+        stream: io.BufferedWriter, header: OkdHeader, encryption_key_index: int
+    ):
+        plaintext_stream = io.BytesIO()
+        plaintext_stream.write(header.magic_bytes)
+        plaintext_stream.write(header.length.to_bytes(4, byteorder="big"))
+        plaintext_stream.write(header.version.ljust(16, b"\x00"))
+        plaintext_stream.write(header.id_karaoke.to_bytes(4, byteorder="big"))
+        plaintext_stream.write(header.adpcm_offset.to_bytes(4, byteorder="big"))
+        plaintext_stream.write(header.encryption_mode.to_bytes(4, byteorder="big"))
+        # option_data length
+        plaintext_stream.write(b"\x00\x00\x00\x00")
+
+        plaintext_stream.seek(0)
+        OkdFile.__encrypt(plaintext_stream, stream, encryption_key_index)
+
+    @staticmethod
+    def __write_chunk(stream: io.BufferedWriter, chunk: OkdChunk):
+        chunk_stream = bitstring.BitStream()
+        chunk.write(chunk_stream)
+        chunk_data_buffer: bytes = chunk_stream.bytes
+
+        chunk_id: bytes
+        if isinstance(chunk, OkdPTrackInfoChunk):
+            chunk_id = b"YPTI"
+        elif isinstance(chunk, OkdExtendedPTrackInfoChunk):
+            chunk_id = b"YPXI"
+        elif isinstance(chunk, OkdP3TrackInfoChunk):
+            chunk_id = b"YP3I"
+        elif isinstance(chunk, OkdMTrackChunk):
+            chunk_number_bytes = chunk.chunk_number.to_bytes(1, byteorder="big")
+            chunk_id = b"\xffMR" + chunk_number_bytes
+        elif isinstance(chunk, OkdPTrackChunk):
+            chunk_number_bytes = chunk.chunk_number.to_bytes(1, byteorder="big")
+            chunk_id = b"\xffPR" + chunk_number_bytes
+        elif isinstance(chunk, OkdAdpcmChunk):
+            chunk_id = b"YADD"
+        elif isinstance(chunk, OkdGenericChunk):
+            chunk_id = chunk.chunk_id
+        else:
+            raise ValueError("Unknown chunk type.")
+
+        chunk_size = len(chunk_data_buffer)
+        chunk_size_bytes = chunk_size.to_bytes(4, byteorder="big")
+
+        stream.write(chunk_id)
+        stream.write(chunk_size_bytes)
+        stream.write(chunk_data_buffer)
+
+    @staticmethod
+    def encrypt(stream: io.BufferedWriter, chunks: list[OkdChunk]):
+        chunks_stream = io.BytesIO()
+        for chunk in chunks:
+            OkdFile.__write_chunk(chunks_stream, chunk)
+        chunks_stream_length = len(chunks_stream.getbuffer())
+        chunks_stream_padding_length = chunks_stream_length % 2
+        if chunks_stream_padding_length != 0:
+            chunks_stream.write(b"\x00" * chunks_stream_padding_length)
+            chunks_stream_length + chunks_stream_padding_length
+
+        length = 28 + chunks_stream_length
+        header = GenericOkdHeader(b"YKS1", length, b"YKS-1   v6.0v110", 0, 0, 1, b"")
+
+        encryption_key_index = OkdFile.__choose_encryption_key_index()
+        OkdFile.__write_okd_header(stream, header, encryption_key_index)
+
+        chunks_stream.seek(0)
+        OkdFile.__encrypt(chunks_stream, stream, encryption_key_index)
