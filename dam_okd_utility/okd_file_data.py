@@ -1,3 +1,4 @@
+import bitstring
 from typing import NamedTuple, Union
 
 
@@ -103,6 +104,9 @@ class OkaHeader(NamedTuple):
 
 
 class OkdGenericChunk(NamedTuple):
+    def write(self, stream: bitstring.BitStream):
+        stream.append(self.data)
+
     chunk_id: bytes
     data: bytes
 

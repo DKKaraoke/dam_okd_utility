@@ -116,8 +116,8 @@ class OkdExtendedPTrackInfoChunk(NamedTuple):
         return OkdExtendedPTrackInfoChunk(tg_mode, data)
 
     def write(self, stream: bitstring.BitStream):
-        # Skip unknown
-        stream.bytepos += 8
+        # Write unknown
+        stream.append(b"\x00" * 8)
         stream.append(bitstring.pack("uintbe:16", self.tg_mode))
         stream.append(bitstring.pack("uintbe:16", len(self.data)))
         for entry in self.data:

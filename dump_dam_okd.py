@@ -15,6 +15,9 @@ from dam_okd_utility.okd_p_track_info_chunk import (
     OkdPTrackInfoChunk,
     OkdPTrackInfoEntry,
 )
+from dam_okd_utility.okd_p3_track_info_chunk import (
+    OkdP3TrackInfoChunk,
+)
 from dam_okd_utility.okd_extended_p_track_info_chunk import (
     OkdExtendedPTrackInfoChunk,
     OkdExtendedPTrackInfoEntry,
@@ -31,13 +34,19 @@ class DamOkdDumper:
         chunks_stream = io.BytesIO()
         okd_header = OkdFile.decrypt(stream, chunks_stream, OkdFileType.OKD)
         DamOkdDumper.__logger.info(f"Header found. header={okd_header}")
+
         chunks_stream.seek(0)
+        chunks_buffer = chunks_stream.read()
+        output_path = os.path.join(directory_path, "chunks.bin")
+        with open(output_path, "wb") as output_file:
+            output_file.write(chunks_buffer)
 
         p_track_info: list[OkdPTrackInfoEntry] | list[
             OkdExtendedPTrackInfoEntry
-        ] | None = None
+        ] | list[OkdP3TrackInfoChunk] | None = None
         p_tracks: list[tuple[int, list[OkdMidiMessage]]] = []
 
+        chunks_stream.seek(0)
         chunk_index = OkdFile.index_chunk(chunks_stream)
         chunks_stream.seek(0)
         for chunk_position, chunk_size in chunk_index:
@@ -98,6 +107,16 @@ class DamOkdDumper:
                     output_file.write(output_json)
 
                 p_track_info = chunk.data
+            elif isinstance(chunk, OkdP3TrackInfoChunk):
+                output_path = os.path.join(directory_path, "p3_track_info.json")
+                output_json = simplejson.dumps(
+                    chunk,
+                    indent=2,
+                )
+                with open(output_path, "w") as output_file:
+                    output_file.write(output_json)
+
+                p_track_info = [chunk]
             elif isinstance(chunk, OkdPTrackChunk):
                 track_number = chunk_buffer[3]
                 output_path = os.path.join(

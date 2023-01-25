@@ -9,6 +9,7 @@ from dam_okd_utility.yamaha_mmt_tg import YamahaMmtTg
 from dam_okd_utility.okd_p_track_midi import OkdPTrackMidi
 from dam_okd_utility.okd_p_track_info_chunk import OkdPTrackInfoEntry
 from dam_okd_utility.okd_extended_p_track_info_chunk import OkdExtendedPTrackInfoEntry
+from dam_okd_utility.okd_p3_track_info_chunk import OkdP3TrackInfoChunk
 from dam_okd_utility.yamaha_mmt_tg import YamahaMmtTg
 
 
@@ -26,13 +27,22 @@ class OkdPTrackChunk(NamedTuple):
         OkdPTrackMidi.write(stream, self.messages)
 
     @staticmethod
-    def from_midi(midi: mido.MidiFile, chunk_number: int):
-        messages = OkdPTrackMidi.midi_to_relative_time_track(midi)
-        return OkdPTrackChunk(chunk_number, messages)
+    def from_midi(midi: mido.MidiFile):
+        relative_time_tracks = OkdPTrackMidi.midi_to_relative_time_tracks(midi)
+        p_track_chunks: list[OkdPTrackChunk] = []
+        for track_index, relative_time_track in enumerate(relative_time_tracks):
+            if relative_time_track is None:
+                continue
+
+            p_track_chunks.append(OkdPTrackChunk(track_index, relative_time_track))
+
+        return p_track_chunks
 
     @staticmethod
     def to_midi(
-        track_info: list[OkdPTrackInfoEntry] | list[OkdExtendedPTrackInfoEntry],
+        track_info: list[OkdPTrackInfoEntry]
+        | list[OkdExtendedPTrackInfoEntry]
+        | list[OkdP3TrackInfoChunk],
         relative_time_tracks: list[tuple[int, list[OkdMidiMessage]]],
         general_midi=True,
     ):

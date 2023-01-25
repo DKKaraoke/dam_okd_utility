@@ -66,7 +66,7 @@ class OkdFile:
             length is not None and (input_stream.tell() - start_position) < length
         ):
             plaintext_buffer = input_stream.read(2)
-            if len(plaintext_buffer) == 0:
+            if length is None and len(plaintext_buffer) == 0:
                 break
             if len(plaintext_buffer) != 2:
                 raise RuntimeError("Invalid plaintext_buffer length.")
@@ -140,7 +140,7 @@ class OkdFile:
             length is not None and (input_stream.tell() - start_position) < length
         ):
             ciphertext_buffer = input_stream.read(2)
-            if len(ciphertext_buffer) == 0:
+            if length is None and len(ciphertext_buffer) == 0:
                 break
             if len(ciphertext_buffer) != 2:
                 raise RuntimeError("Invalid ciphertext_buffer length.")
@@ -477,7 +477,7 @@ class OkdFile:
         )
 
         data_offset = input_stream.tell() - start_position
-        data_length = header.length - data_offset
+        data_length = header.length - (data_offset - 8)
 
         extended_data_offset: int
         if isinstance(header, OkdHeader):
@@ -582,14 +582,23 @@ class OkdFile:
         # option_data length
         plaintext_stream.write(b"\x00\x00\x00\x00")
 
+        plaintext_length = plaintext_stream.tell()
+
         plaintext_stream.seek(0)
-        OkdFile.__encrypt(plaintext_stream, stream, encryption_key_index)
+        OkdFile.__encrypt(
+            plaintext_stream, stream, encryption_key_index, plaintext_length
+        )
 
     @staticmethod
     def __write_chunk(stream: io.BufferedWriter, chunk: OkdChunk):
         chunk_stream = bitstring.BitStream()
         chunk.write(chunk_stream)
         chunk_data_buffer: bytes = chunk_stream.bytes
+        chunk_size = len(chunk_data_buffer)
+        chunk_data_padding_length = chunk_size % 2
+        if chunk_data_padding_length != 0:
+            chunk_data_buffer += b"\x00" * chunk_data_padding_length
+            chunk_size += chunk_data_padding_length
 
         chunk_id: bytes
         if isinstance(chunk, OkdPTrackInfoChunk):
@@ -611,10 +620,8 @@ class OkdFile:
         else:
             raise ValueError("Unknown chunk type.")
 
-        chunk_size = len(chunk_data_buffer)
-        chunk_size_bytes = chunk_size.to_bytes(4, byteorder="big")
-
         stream.write(chunk_id)
+        chunk_size_bytes = chunk_size.to_bytes(4, byteorder="big")
         stream.write(chunk_size_bytes)
         stream.write(chunk_data_buffer)
 
@@ -623,17 +630,20 @@ class OkdFile:
         chunks_stream = io.BytesIO()
         for chunk in chunks:
             OkdFile.__write_chunk(chunks_stream, chunk)
-        chunks_stream_length = len(chunks_stream.getbuffer())
-        chunks_stream_padding_length = chunks_stream_length % 2
-        if chunks_stream_padding_length != 0:
-            chunks_stream.write(b"\x00" * chunks_stream_padding_length)
-            chunks_stream_length + chunks_stream_padding_length
+        # Check sum?
+        chunks_stream.write(b"\x00\x00\x00\x00")
 
-        length = 28 + chunks_stream_length
-        header = GenericOkdHeader(b"YKS1", length, b"YKS-1   v6.0v110", 0, 0, 1, b"")
+        chunks_stream_length = chunks_stream.getbuffer().nbytes
+        length = 32 + chunks_stream_length
+        header = GenericOkdHeader(
+            b"YKS1", length, b"YKS-1   v6.0v110", 900001, 0, 1, b""
+        )
 
         encryption_key_index = OkdFile.__choose_encryption_key_index()
+
         OkdFile.__write_okd_header(stream, header, encryption_key_index)
 
         chunks_stream.seek(0)
-        OkdFile.__encrypt(chunks_stream, stream, encryption_key_index)
+        OkdFile.__encrypt(
+            chunks_stream, stream, encryption_key_index, chunks_stream_length
+        )

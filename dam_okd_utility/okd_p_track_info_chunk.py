@@ -131,9 +131,8 @@ class OkdPTrackInfoChunk(NamedTuple):
         elif "data" in json_object:
             return OkdPTrackInfoChunk(json_object["data"])
 
-    def write(self, stream: bitstring.BitStream, multiple_entry=True):
-        if multiple_entry:
-            stream.append(bitstring.pack("uintbe:16", len(self.data)))
+    def write(self, stream: bitstring.BitStream):
+        stream.append(bitstring.pack("uintbe:16", len(self.data)))
         for entry in self.data:
             entry.write(stream)
 
