@@ -603,4 +603,5 @@ class OkdPTrackMidi:
             if status_type == 0x80 or status_type == 0x90:
                 write_variable_int(stream, message.duration >> 2)
 
-        stream.append(b"\x00\x00\x00\x00\x00")
+        # End of track
+        stream.append(b"\x00\x00\x00\x00\x00\x00\x00\x00")

@@ -105,3 +105,6 @@ class OkdMTrackMidi:
         for message in track:
             write_extended_variable_int(stream, message.delta_time)
             stream.append(message.data)
+
+        # End of track
+        stream.append(b"\x00\x00\x00\x00\x00\x00\x00\x00")
