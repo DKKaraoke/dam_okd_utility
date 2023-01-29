@@ -2,7 +2,6 @@ import bitstring
 
 from dam_okd_utility.customized_logger import getLogger
 from dam_okd_utility.okd_midi import (
-    read_status_byte,
     is_data_bytes,
     read_extended_variable_int,
     write_extended_variable_int,

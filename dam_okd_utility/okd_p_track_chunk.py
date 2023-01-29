@@ -13,6 +13,8 @@ from dam_okd_utility.okd_p3_track_info_chunk import OkdP3TrackInfoChunk
 class OkdPTrackChunk(NamedTuple):
     """DAM OKD P-Track Chunk"""
 
+    CHUNK_NUMBER_PORT_MAP = [0, 1, 2, 2, 3]
+
     __logger = getLogger("OkdPTrackChunk")
 
     @staticmethod

@@ -3,7 +3,13 @@ import mido
 from typing import NamedTuple
 
 from dam_okd_utility.customized_logger import getLogger
-from dam_okd_utility.midi import get_first_tempo, is_meta_track, get_track_port
+from dam_okd_utility.midi import (
+    get_first_tempo,
+    get_first_port_track,
+    get_port_channel_track,
+    get_first_note_time,
+    get_last_note_time,
+)
 from dam_okd_utility.okd_midi import OkdMidiMessage
 from dam_okd_utility.okd_m_track_midi import OkdMTrackMidi
 
@@ -21,6 +27,8 @@ class OkdMTrackInterpretation(NamedTuple):
 
 class OkdMTrackChunk(NamedTuple):
     """DAM OKD M-Track Chunk"""
+
+    MIDI_M_TRACK_PORT = 15
 
     __logger = getLogger("OkdMTrackChunk")
 
@@ -123,6 +131,169 @@ class OkdMTrackChunk(NamedTuple):
             unknown_ff,
         )
 
+    @staticmethod
+    def from_midi(karaoke_midi: mido.MidiFile):
+        karaoke_midi_m_track = get_first_port_track(
+            karaoke_midi, OkdMTrackChunk.MIDI_M_TRACK_PORT
+        )
+        melody_track: mido.MidiTrack
+        if karaoke_midi_m_track is None:
+            OkdMTrackChunk.__logger.warning("M-Track not found.")
+
+        melody_track = get_port_channel_track(karaoke_midi, 1, 8)
+        if melody_track is None:
+            raise ValueError("Melody track not found.")
+
+        karaoke_midi_tempo = get_first_tempo(karaoke_midi)
+        ppq_conversion_ratio = 480.0 / karaoke_midi.ticks_per_beat
+        tempo_conversion_ratio = 125.0 / mido.tempo2bpm(karaoke_midi_tempo)
+        time_conversion_ratio = ppq_conversion_ratio * tempo_conversion_ratio
+
+        first_note_time = round(get_first_note_time(karaoke_midi) * time_conversion_ratio)
+        last_note_time = round(get_last_note_time(karaoke_midi) * time_conversion_ratio)
+
+        hooks: list[tuple[int, int]] = []
+
+        current_hook_start = -1
+        two_chorus_fadeout_time = -1
+
+        if karaoke_midi_m_track is not None:
+            absolute_time = 0
+            for karaoke_midi_message in karaoke_midi_m_track:
+                absolute_time += karaoke_midi_message.time
+                converted_absoulte_time = round(absolute_time * time_conversion_ratio)
+
+                if not isinstance(karaoke_midi_message, mido.Message):
+                    continue
+
+                if karaoke_midi_message.type == "note_on":
+                    if karaoke_midi_message.note == 48:
+                        current_hook_start = converted_absoulte_time
+                    elif karaoke_midi_message.note == 108:
+                        two_chorus_fadeout_time = converted_absoulte_time
+                elif karaoke_midi_message.type == "note_off":
+                    if karaoke_midi_message.note == 48:
+                        hooks.append((current_hook_start, converted_absoulte_time))
+
+        melody_notes: list[tuple[int, int]] = []
+        current_melody_note_start = -1
+        current_melody_node_number = -1
+
+        absolute_time = 0
+        for karaoke_midi_message in melody_track:
+            absolute_time += karaoke_midi_message.time
+            converted_absoulte_time = round(absolute_time * time_conversion_ratio)
+
+            if not isinstance(karaoke_midi_message, mido.Message):
+                continue
+
+            if karaoke_midi_message.type == "note_on":
+                current_melody_note_start = converted_absoulte_time
+                current_melody_node_number = karaoke_midi_message.note
+            elif (
+                karaoke_midi_message.type == "note_off"
+                and karaoke_midi_message.note == current_melody_node_number
+            ):
+                melody_notes.append(
+                    (current_melody_note_start, converted_absoulte_time)
+                )
+
+        if len(melody_notes) < 1:
+            raise ValueError("Melody note not found.")
+
+        melody_notes_copy = melody_notes.copy()
+        visible_guide_melody_delimiters: list[tuple[int, int]] = []
+        current_page_start = -1
+        while True:
+            melody_note: tuple[int, int]
+            try:
+                melody_note = melody_notes_copy.pop(0)
+            except IndexError:
+                break
+            melody_note_start, melody_note_end = melody_note
+
+            if current_page_start == -1:
+                current_page_start = melody_note_start
+                visible_guide_melody_delimiters.append((melody_note_start, 0))
+                continue
+
+            next_melody_note: tuple[int, int]
+            try:
+                next_melody_note = melody_notes_copy[0]
+            except IndexError:
+                visible_guide_melody_delimiters.append((melody_note_end, 2))
+                break
+            next_melody_note_start, next_melody_note_end = next_melody_note
+
+            page_length = melody_note_end - current_page_start
+            if 8000 < page_length:
+                void_length = next_melody_note_start - melody_note_end
+                if 8000 < void_length:
+                    melody_notes_copy.pop(0)
+                    visible_guide_melody_delimiters.append((next_melody_note_end, 1))
+                    current_page_start = -1
+                else:
+                    visible_guide_melody_delimiters.append((melody_note_end, 3))
+                    current_page_start = next_melody_note_start
+
+        absolute_time_messages: list[tuple[int, bytes]] = []
+
+        current_beat_time = 0
+        current_beat_count = 4
+        while current_beat_time < melody_notes[-1][0]:
+            if current_beat_count < 4:
+                absolute_time_messages.append((current_beat_time, b"\xF2"))
+                current_beat_count += 1
+            else:
+                absolute_time_messages.append((current_beat_time, b"\xF1"))
+                current_beat_count = 1
+
+            current_beat_time += karaoke_midi.ticks_per_beat
+
+        absolute_time_messages.append((0, b"\xFF\x00\x04\x02\xFE"))
+
+        absolute_time_messages.append((first_note_time, b"\xFF\x00\x04\x02\xFE"))
+        absolute_time_messages.append((first_note_time, b"\xF6\x00"))
+        absolute_time_messages.append((last_note_time, b"\xF6\x01"))
+
+        for hook_start, hook_end in hooks[:-1]:
+            absolute_time_messages.append((hook_start, b"\xF3\x00"))
+            absolute_time_messages.append((hook_end, b"\xF3\x01"))
+
+        if len(hooks) != 0:
+            last_hook_start, last_hook_end = hooks[-1]
+            absolute_time_messages.append((last_hook_start, b"\xF3\x02"))
+            absolute_time_messages.append((last_hook_end, b"\xF3\x03"))
+
+        for (
+            visible_guide_melody_delimiter_time,
+            visible_guide_melody_delimiter_type,
+        ) in visible_guide_melody_delimiters:
+            absolute_time_messages.append(
+                (
+                    visible_guide_melody_delimiter_time,
+                    b"\xF4"
+                    + visible_guide_melody_delimiter_type.to_bytes(1, byteorder="big"),
+                )
+            )
+
+        if two_chorus_fadeout_time != -1:
+            absolute_time_messages.append((two_chorus_fadeout_time, b"\xF5"))
+
+        absolute_time_messages.sort(
+            key=lambda absolute_time_message: absolute_time_message[0]
+        )
+
+        relative_time_messages: list[OkdMidiMessage] = []
+        current_time = 0
+        for absolute_time, message_buffer in absolute_time_messages:
+            delta_time = absolute_time - current_time
+            relative_time_messages.append(OkdMidiMessage(delta_time, message_buffer, 0))
+            print(OkdMidiMessage(delta_time, message_buffer, 0))
+
+            current_time = absolute_time
+
+        return OkdMTrackChunk(0x00, relative_time_messages)
 
     @staticmethod
     def interpretation_to_midi(interpretation: OkdMTrackInterpretation):
