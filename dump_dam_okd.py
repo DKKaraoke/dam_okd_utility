@@ -86,6 +86,23 @@ class DamOkdDumper:
                 )
                 with open(output_path, "w") as output_file:
                     output_file.write(output_json)
+
+                interpretation = OkdMTrackChunk.to_interpretation(chunk.messages)
+                output_path = os.path.join(
+                    directory_path,
+                    "m_track_" + str(track_number) + "_interpretation.json",
+                )
+                output_json = simplejson.dumps(
+                    interpretation,
+                    sort_keys=True,
+                    indent=2,
+                )
+                with open(output_path, "w") as output_file:
+                    output_file.write(output_json)
+
+                output_path = os.path.join(directory_path, "m_track.mid")
+                m_track_midi = OkdMTrackChunk.interpretation_to_midi(interpretation)
+                m_track_midi.save(output_path)
             elif isinstance(chunk, OkdPTrackInfoChunk):
                 output_path = os.path.join(directory_path, "p_track_info.json")
                 output_json = simplejson.dumps(
