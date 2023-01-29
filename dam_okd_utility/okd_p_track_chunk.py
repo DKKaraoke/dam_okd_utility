@@ -3,14 +3,11 @@ import mido
 from typing import NamedTuple
 
 from dam_okd_utility.customized_logger import getLogger
-from dam_okd_utility.dump_memory import dump_memory
 from dam_okd_utility.okd_midi import OkdMidiMessage
-from dam_okd_utility.yamaha_mmt_tg import YamahaMmtTg
 from dam_okd_utility.okd_p_track_midi import OkdPTrackMidi
 from dam_okd_utility.okd_p_track_info_chunk import OkdPTrackInfoEntry
 from dam_okd_utility.okd_extended_p_track_info_chunk import OkdExtendedPTrackInfoEntry
 from dam_okd_utility.okd_p3_track_info_chunk import OkdP3TrackInfoChunk
-from dam_okd_utility.yamaha_mmt_tg import YamahaMmtTg
 
 
 class OkdPTrackChunk(NamedTuple):
@@ -85,6 +82,7 @@ class OkdPTrackChunk(NamedTuple):
             delta_time = message.time - track_current_times[message.track]
             track_current_times[message.track] = message.time
 
+            midi_message: mido.Message
             try:
                 midi_message = mido.Message.from_bytes(message.data, delta_time)
             except ValueError:

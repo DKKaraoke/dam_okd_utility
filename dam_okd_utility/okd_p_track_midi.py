@@ -2,8 +2,8 @@ import bitstring
 import mido
 
 from dam_okd_utility.customized_logger import getLogger
+from dam_okd_utility.midi import get_first_tempo, is_meta_track, get_track_port
 from dam_okd_utility.okd_midi import (
-    read_status_byte,
     is_data_bytes,
     read_variable_int,
     write_variable_int,
@@ -47,7 +47,7 @@ class OkdPTrackMidi:
             status_byte = data[0]
             status_type = status_byte & 0xF0
 
-        absolute_messages: list[OkdPTrackAbsoluteTimeMessage] = []
+        absolute_time_messages: list[OkdPTrackAbsoluteTimeMessage] = []
 
         if status_type == 0xF0:
             if status_byte == 0xF0:
@@ -56,7 +56,7 @@ class OkdPTrackMidi:
                         continue
 
                     track = port * OkdPTrackMidi.CHANNEL_COUNT_PER_PORT
-                    absolute_messages.append(
+                    absolute_time_messages.append(
                         OkdPTrackAbsoluteTimeMessage(
                             time,
                             port,
@@ -91,18 +91,18 @@ class OkdPTrackMidi:
                     track = (
                         port * OkdPTrackMidi.CHANNEL_COUNT_PER_PORT
                     ) + grouped_channel
-                    absolute_message_status_byte = status_type | grouped_channel
-                    absolute_message_data = (
-                        absolute_message_status_byte.to_bytes(1, byteorder="big")
+                    absolute_time_message_status_byte = status_type | grouped_channel
+                    absolute_time_message_data = (
+                        absolute_time_message_status_byte.to_bytes(1, byteorder="big")
                         + data[1:]
                     )
-                    absolute_messages.append(
+                    absolute_time_messages.append(
                         OkdPTrackAbsoluteTimeMessage(
-                            time, port, track, absolute_message_data
+                            time, port, track, absolute_time_message_data
                         )
                     )
 
-        return absolute_messages
+        return absolute_time_messages
 
     @staticmethod
     def __relative_time_track_to_absolute_time_track(
@@ -235,7 +235,9 @@ class OkdPTrackMidi:
             else:
                 is_channel_group_enabled = False
 
-        absolute_time_track.sort(key=lambda absolute_message: absolute_message.time)
+        absolute_time_track.sort(
+            key=lambda absolute_time_message: absolute_time_message.time
+        )
 
         return absolute_time_track
 
@@ -412,33 +414,8 @@ class OkdPTrackMidi:
         return track
 
     @staticmethod
-    def __get_midi_tempo(midi: mido.MidiFile):
-        for track in midi.tracks:
-            for midi_message in track:
-                if midi_message.type == "set_tempo":
-                    return midi_message.tempo
-
-        return 500000
-
-    @staticmethod
-    def __is_meta_track(midi_track: mido.MidiTrack):
-        for midi_message in midi_track:
-            if isinstance(midi_message, mido.Message):
-                return False
-
-        return True
-
-    @staticmethod
-    def __get_midi_track_port(midi_track: mido.MidiTrack):
-        for midi_message in midi_track:
-            if midi_message.type == "midi_port":
-                return midi_message.port
-
-        return 0
-
-    @staticmethod
     def __midi_to_absolute_time_tracks(midi: mido.MidiFile):
-        midi_tempo = OkdPTrackMidi.__get_midi_tempo(midi)
+        midi_tempo = get_first_tempo(midi)
         ppq_conversion_ratio = 480.0 / midi.ticks_per_beat
         tempo_conversion_ratio = 125.0 / mido.tempo2bpm(midi_tempo)
         time_conversion_ratio = ppq_conversion_ratio * tempo_conversion_ratio
@@ -447,10 +424,10 @@ class OkdPTrackMidi:
             None
         ] * OkdPTrackMidi.PORT_COUNT
         for midi_track in midi.tracks:
-            if OkdPTrackMidi.__is_meta_track(midi_track):
+            if is_meta_track(midi_track):
                 continue
 
-            port = OkdPTrackMidi.__get_midi_track_port(midi_track)
+            port = get_track_port(midi_track)
             if absolute_time_tracks[port] is None:
                 absolute_time_tracks[port] = []
 
