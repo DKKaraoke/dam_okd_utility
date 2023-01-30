@@ -169,6 +169,7 @@ class DamOkdComposer:
         karaoke_midi = mido.MidiFile(karaoke_path)
 
         m_track_chunk = OkdMTrackChunk.from_midi(karaoke_midi)
+        # Remove M-Track
         remove_port_tracks(karaoke_midi, 15)
         p_track_chunks = OkdPTrackChunk.from_midi(karaoke_midi)
         p_track_info_chunk = DamOkdComposer.__p_track_info_chunk_from_p_track_chunks(

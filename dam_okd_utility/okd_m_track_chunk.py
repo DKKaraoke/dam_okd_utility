@@ -7,8 +7,8 @@ from dam_okd_utility.midi import (
     get_first_tempo,
     get_first_port_track,
     get_port_channel_track,
-    get_first_note_time,
-    get_last_note_time,
+    get_first_note_on_time,
+    get_last_note_off_time,
 )
 from dam_okd_utility.okd_midi import OkdMidiMessage
 from dam_okd_utility.okd_m_track_midi import OkdMTrackMidi
@@ -149,8 +149,12 @@ class OkdMTrackChunk(NamedTuple):
         tempo_conversion_ratio = 125.0 / mido.tempo2bpm(karaoke_midi_tempo)
         time_conversion_ratio = ppq_conversion_ratio * tempo_conversion_ratio
 
-        first_note_time = round(get_first_note_time(karaoke_midi) * time_conversion_ratio)
-        last_note_time = round(get_last_note_time(karaoke_midi) * time_conversion_ratio)
+        first_note_on_time = round(
+            get_first_note_on_time(karaoke_midi) * time_conversion_ratio
+        )
+        last_note_off_time = round(
+            get_last_note_off_time(karaoke_midi) * time_conversion_ratio
+        )
 
         hooks: list[tuple[int, int]] = []
 
@@ -169,7 +173,7 @@ class OkdMTrackChunk(NamedTuple):
                 if karaoke_midi_message.type == "note_on":
                     if karaoke_midi_message.note == 48:
                         current_hook_start = converted_absoulte_time
-                    elif karaoke_midi_message.note == 108:
+                    elif karaoke_midi_message.note == 72:
                         two_chorus_fadeout_time = converted_absoulte_time
                 elif karaoke_midi_message.type == "note_off":
                     if karaoke_midi_message.note == 48:
@@ -201,46 +205,46 @@ class OkdMTrackChunk(NamedTuple):
         if len(melody_notes) < 1:
             raise ValueError("Melody note not found.")
 
-        melody_notes_copy = melody_notes.copy()
-        visible_guide_melody_delimiters: list[tuple[int, int]] = []
-        current_page_start = -1
-        while True:
-            melody_note: tuple[int, int]
-            try:
-                melody_note = melody_notes_copy.pop(0)
-            except IndexError:
-                break
-            melody_note_start, melody_note_end = melody_note
+        # melody_notes_copy = melody_notes.copy()
+        # visible_guide_melody_delimiters: list[tuple[int, int]] = []
+        # current_page_start = -1
+        # while True:
+        #     melody_note: tuple[int, int]
+        #     try:
+        #         melody_note = melody_notes_copy.pop(0)
+        #     except IndexError:
+        #         break
+        #     melody_note_start, melody_note_end = melody_note
 
-            if current_page_start == -1:
-                current_page_start = melody_note_start
-                visible_guide_melody_delimiters.append((melody_note_start, 0))
-                continue
+        #     if current_page_start == -1:
+        #         current_page_start = melody_note_start
+        #         visible_guide_melody_delimiters.append((melody_note_start, 0))
+        #         continue
 
-            next_melody_note: tuple[int, int]
-            try:
-                next_melody_note = melody_notes_copy[0]
-            except IndexError:
-                visible_guide_melody_delimiters.append((melody_note_end, 2))
-                break
-            next_melody_note_start, next_melody_note_end = next_melody_note
+        #     next_melody_note: tuple[int, int]
+        #     try:
+        #         next_melody_note = melody_notes_copy[0]
+        #     except IndexError:
+        #         visible_guide_melody_delimiters.append((melody_note_end + 1, 2))
+        #         break
+        #     next_melody_note_start, next_melody_note_end = next_melody_note
 
-            page_length = melody_note_end - current_page_start
-            if 8000 < page_length:
-                void_length = next_melody_note_start - melody_note_end
-                if 8000 < void_length:
-                    melody_notes_copy.pop(0)
-                    visible_guide_melody_delimiters.append((next_melody_note_end, 1))
-                    current_page_start = -1
-                else:
-                    visible_guide_melody_delimiters.append((melody_note_end, 3))
-                    current_page_start = next_melody_note_start
+        #     page_length = melody_note_end - current_page_start
+        #     if 7000 < page_length:
+        #         void_length = next_melody_note_start - melody_note_end
+        #         if 7000 < void_length:
+        #             melody_notes_copy.pop(0)
+        #             visible_guide_melody_delimiters.append((melody_note_end + 1, 1))
+        #             current_page_start = -1
+        #         else:
+        #             visible_guide_melody_delimiters.append((next_melody_note_start, 3))
+        #             current_page_start = next_melody_note_start
 
         absolute_time_messages: list[tuple[int, bytes]] = []
 
         current_beat_time = 0
         current_beat_count = 4
-        while current_beat_time < melody_notes[-1][0]:
+        while current_beat_time < last_note_off_time + 1:
             if current_beat_count < 4:
                 absolute_time_messages.append((current_beat_time, b"\xF2"))
                 current_beat_count += 1
@@ -252,9 +256,8 @@ class OkdMTrackChunk(NamedTuple):
 
         absolute_time_messages.append((0, b"\xFF\x00\x04\x02\xFE"))
 
-        absolute_time_messages.append((first_note_time, b"\xFF\x00\x04\x02\xFE"))
-        absolute_time_messages.append((first_note_time, b"\xF6\x00"))
-        absolute_time_messages.append((last_note_time, b"\xF6\x01"))
+        absolute_time_messages.append((first_note_on_time, b"\xF6\x00"))
+        absolute_time_messages.append((last_note_off_time + 1, b"\xF6\x01"))
 
         for hook_start, hook_end in hooks[:-1]:
             absolute_time_messages.append((hook_start, b"\xF3\x00"))
@@ -265,17 +268,17 @@ class OkdMTrackChunk(NamedTuple):
             absolute_time_messages.append((last_hook_start, b"\xF3\x02"))
             absolute_time_messages.append((last_hook_end, b"\xF3\x03"))
 
-        for (
-            visible_guide_melody_delimiter_time,
-            visible_guide_melody_delimiter_type,
-        ) in visible_guide_melody_delimiters:
-            absolute_time_messages.append(
-                (
-                    visible_guide_melody_delimiter_time,
-                    b"\xF4"
-                    + visible_guide_melody_delimiter_type.to_bytes(1, byteorder="big"),
-                )
-            )
+        # for (
+        #     visible_guide_melody_delimiter_time,
+        #     visible_guide_melody_delimiter_type,
+        # ) in visible_guide_melody_delimiters:
+        #     absolute_time_messages.append(
+        #         (
+        #             visible_guide_melody_delimiter_time,
+        #             b"\xF4"
+        #             + visible_guide_melody_delimiter_type.to_bytes(1, byteorder="big"),
+        #         )
+        #     )
 
         if two_chorus_fadeout_time != -1:
             absolute_time_messages.append((two_chorus_fadeout_time, b"\xF5"))
@@ -289,7 +292,6 @@ class OkdMTrackChunk(NamedTuple):
         for absolute_time, message_buffer in absolute_time_messages:
             delta_time = absolute_time - current_time
             relative_time_messages.append(OkdMidiMessage(delta_time, message_buffer, 0))
-            print(OkdMidiMessage(delta_time, message_buffer, 0))
 
             current_time = absolute_time
 
@@ -314,6 +316,23 @@ class OkdMTrackChunk(NamedTuple):
             midi_track.append(mido.Message("note_on", note=48, time=hook_start))
             midi_track.append(mido.Message("note_off", note=48, time=hook_end))
 
+        for (
+            time,
+            visible_guide_melody_delimiter,
+        ) in interpretation.visible_guide_melody_delimiters:
+            midi_track.append(
+                mido.Message(
+                    "note_on", note=60 + visible_guide_melody_delimiter, time=time
+                )
+            )
+            midi_track.append(
+                mido.Message(
+                    "note_off",
+                    note=60 + visible_guide_melody_delimiter,
+                    time=time + 1000,
+                )
+            )
+
         if interpretation.two_chorus_fadeout_time != -1:
             midi_track.append(
                 mido.Message(
@@ -327,6 +346,13 @@ class OkdMTrackChunk(NamedTuple):
                     time=interpretation.two_chorus_fadeout_time + 1000,
                 )
             )
+
+        midi_track.append(
+            mido.Message("note_on", note=84, time=interpretation.song_section[0])
+        )
+        midi_track.append(
+            mido.Message("note_off", note=84, time=interpretation.song_section[1])
+        )
 
         for adpcm_section_start, adpcm_section_end in interpretation.adpcm_sections:
             midi_track.append(
