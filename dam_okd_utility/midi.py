@@ -73,7 +73,7 @@ def get_port_channel_track(midi: mido.MidiFile, port: int, channel: int):
                 return port_track
 
 
-def get_first_note_time(midi: mido.MidiFile):
+def get_first_note_on_time(midi: mido.MidiFile):
     first_note_time = 16777216
     for track in midi.tracks:
         absolute_time_track = relative_time_track_to_absolute_time_track(track)
@@ -86,12 +86,12 @@ def get_first_note_time(midi: mido.MidiFile):
     return first_note_time
 
 
-def get_last_note_time(midi: mido.MidiFile):
+def get_last_note_off_time(midi: mido.MidiFile):
     last_note_time = 0
     for track in midi.tracks:
         absolute_time_track = relative_time_track_to_absolute_time_track(track)
         for absolute_time_message in absolute_time_track:
-            if absolute_time_message.type != "note_on":
+            if absolute_time_message.type != "note_off":
                 continue
 
             last_note_time = max(absolute_time_message.time, last_note_time)
