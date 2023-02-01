@@ -36,7 +36,7 @@ options:
 
 ### Compose
 
-Compose karaoke music data from MIDI form files
+Compose Karaoke music data from MIDI form files
 
 ```
 $ python compose_dam_okd.py --help
@@ -76,8 +76,8 @@ options:
 
 ### MIDI port and track map
 
-- Port 0, Track 0-15: Instrumental
-- Port 1, Track 0-7,9-15: Instrumental
+- Port 0, Track 0-15: Instrument
+- Port 1, Track 0-7,9-15: Instrument
 - Port 1, Track 8: Guide melody
 - Port 15:, First valid track: M-Track
 
