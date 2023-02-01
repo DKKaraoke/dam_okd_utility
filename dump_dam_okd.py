@@ -32,7 +32,7 @@ class DamOkdDumper:
     @staticmethod
     def dump(stream: io.BufferedReader, directory_path: str):
         chunks_stream = io.BytesIO()
-        okd_header = OkdFile.decrypt(stream, chunks_stream, OkdFileType.OKD)
+        okd_header = OkdFile.descramble(stream, chunks_stream, OkdFileType.OKD)
         DamOkdDumper.__logger.info(f"Header found. header={okd_header}")
 
         chunks_stream.seek(0)

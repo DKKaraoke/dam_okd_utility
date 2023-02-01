@@ -5,7 +5,7 @@ import os
 import random
 
 from dam_okd_utility.customized_logger import getLogger
-from dam_okd_utility.okd_encryption_key_table import OKD_ENCRYPTION_KEY_TABLE
+from dam_okd_utility.okd_scramble_pattern import OKD_SCRAMBLE_PATTERN
 from dam_okd_utility.okd_file_data import (
     GenericOkdHeader,
     MmtOkdHeader,
@@ -51,14 +51,14 @@ class OkdFile:
     __logger = getLogger("OkdFile")
 
     @staticmethod
-    def __choose_encryption_key_index():
+    def __choose_scramble_pattern_index():
         return random.randint(0x00, 0xFF)
 
     @staticmethod
-    def __encrypt(
+    def __scramble(
         input_stream: io.BufferedReader,
         output_stream: io.BufferedWriter,
-        encryption_key_index: int,
+        scramble_pattern_index: int,
         length: int | None = None,
     ):
         start_position = input_stream.tell()
@@ -71,20 +71,20 @@ class OkdFile:
             if len(plaintext_buffer) != 2:
                 raise RuntimeError("Invalid plaintext_buffer length.")
             plaintext = int.from_bytes(plaintext_buffer, byteorder="big")
-            encryption_key: int
-            if encryption_key_index is None:
-                encryption_key = 0x17D7
+            scramble_pattern: int
+            if scramble_pattern_index is None:
+                scramble_pattern = 0x17D7
             else:
-                encryption_key = OKD_ENCRYPTION_KEY_TABLE[encryption_key_index % 0x100]
-            ciphertext = plaintext ^ encryption_key
-            ciphertext_buffer = ciphertext.to_bytes(2, byteorder="big")
-            output_stream.write(ciphertext_buffer)
-            if encryption_key_index is not None:
-                encryption_key_index += 1
-        return encryption_key_index
+                scramble_pattern = OKD_SCRAMBLE_PATTERN[scramble_pattern_index % 0x100]
+            scrambled = plaintext ^ scramble_pattern
+            scrambled_buffer = scrambled.to_bytes(2, byteorder="big")
+            output_stream.write(scrambled_buffer)
+            if scramble_pattern_index is not None:
+                scramble_pattern_index += 1
+        return scramble_pattern_index
 
     @staticmethod
-    def __detect_first_encryption_key_index(
+    def __detect_first_scramble_pattern_index(
         stream: io.BufferedReader, file_type: OkdFileType
     ):
         expected_magic_bytes: bytes
@@ -112,56 +112,56 @@ class OkdFile:
         stream.seek(-4, os.SEEK_CUR)
         magic_bytes_int = int.from_bytes(magic_bytes_buffer, byteorder="big")
         if magic_bytes_int != expected_magic_bytes_int:
-            OkdFile.__logger.info("OKD file is encrypted.")
+            OkdFile.__logger.info("OKD file is scrambleed.")
             expected_key = magic_bytes_int ^ expected_magic_bytes_int
-            for encryption_key_index in range(0x100):
+            for scramble_pattern_index in range(0x100):
                 candidated_key: int
-                if encryption_key_index == 0xFF:
+                if scramble_pattern_index == 0xFF:
                     candidated_key = 0x87D2
                 else:
-                    candidated_key = OKD_ENCRYPTION_KEY_TABLE[encryption_key_index + 1]
-                candidated_key |= OKD_ENCRYPTION_KEY_TABLE[encryption_key_index] << 16
+                    candidated_key = OKD_SCRAMBLE_PATTERN[scramble_pattern_index + 1]
+                candidated_key |= OKD_SCRAMBLE_PATTERN[scramble_pattern_index] << 16
                 if expected_key == candidated_key:
                     OkdFile.__logger.info(
-                        f"OKD file encryption_key_index detected. encryption_key_index={encryption_key_index}"
+                        f"OKD file scramble_pattern_index detected. scramble_pattern_index={scramble_pattern_index}"
                     )
-                    return encryption_key_index
-            raise RuntimeError("Failed to detect OKD file encryption_key_index.")
+                    return scramble_pattern_index
+            raise RuntimeError("Failed to detect OKD file scramble_pattern_index.")
 
     @staticmethod
-    def __decrypt(
+    def __descramble(
         input_stream: io.BufferedReader,
         output_stream: io.BufferedWriter,
-        encryption_key_index: int | None,
+        scramble_pattern_index: int | None,
         length: int | None = None,
     ):
         start_position = input_stream.tell()
         while length is None or (
             length is not None and (input_stream.tell() - start_position) < length
         ):
-            ciphertext_buffer = input_stream.read(2)
-            if length is None and len(ciphertext_buffer) == 0:
+            scrambled_buffer = input_stream.read(2)
+            if length is None and len(scrambled_buffer) == 0:
                 break
-            if len(ciphertext_buffer) != 2:
-                raise RuntimeError("Invalid ciphertext_buffer length.")
-            ciphertext = int.from_bytes(ciphertext_buffer, byteorder="big")
-            encryption_key: int
-            if encryption_key_index is None:
-                encryption_key = 0x17D7
+            if len(scrambled_buffer) != 2:
+                raise RuntimeError("Invalid scrambled_buffer length.")
+            scrambled = int.from_bytes(scrambled_buffer, byteorder="big")
+            scramble_pattern: int
+            if scramble_pattern_index is None:
+                scramble_pattern = 0x17D7
             else:
-                encryption_key = OKD_ENCRYPTION_KEY_TABLE[encryption_key_index % 0x100]
-            plaintext = ciphertext ^ encryption_key
+                scramble_pattern = OKD_SCRAMBLE_PATTERN[scramble_pattern_index % 0x100]
+            plaintext = scrambled ^ scramble_pattern
             plaintext_buffer = plaintext.to_bytes(2, byteorder="big")
             output_stream.write(plaintext_buffer)
-            if encryption_key_index is not None:
-                encryption_key_index += 1
-        return encryption_key_index
+            if scramble_pattern_index is not None:
+                scramble_pattern_index += 1
+        return scramble_pattern_index
 
     @staticmethod
-    def __read_okd_header(stream: io.BufferedReader, encryption_key_index: int):
+    def __read_okd_header(stream: io.BufferedReader, scramble_pattern_index: int):
         plaintext_stream = io.BytesIO()
-        encryption_key_index = OkdFile.__decrypt(
-            stream, plaintext_stream, encryption_key_index, 40
+        scramble_pattern_index = OkdFile.__descramble(
+            stream, plaintext_stream, scramble_pattern_index, 40
         )
         plaintext_stream.seek(0)
 
@@ -179,8 +179,8 @@ class OkdFile:
         encryption_mode = int.from_bytes(header_buffer[32:36], byteorder="big")
         option_data_length: int = int.from_bytes(header_buffer[36:40], byteorder="big")
 
-        encryption_key_index = OkdFile.__decrypt(
-            stream, plaintext_stream, encryption_key_index, option_data_length
+        scramble_pattern_index = OkdFile.__descramble(
+            stream, plaintext_stream, scramble_pattern_index, option_data_length
         )
         plaintext_stream.seek(40)
         option_data_buffer = plaintext_stream.read(option_data_length)
@@ -380,10 +380,10 @@ class OkdFile:
         return True
 
     @staticmethod
-    def __read_oka_header(stream: io.BufferedReader, encryption_key_index: int):
+    def __read_oka_header(stream: io.BufferedReader, scramble_pattern_index: int):
         plaintext_stream = io.BytesIO()
-        encryption_key_index = OkdFile.__decrypt(
-            stream, plaintext_stream, encryption_key_index, 40
+        scramble_pattern_index = OkdFile.__descramble(
+            stream, plaintext_stream, scramble_pattern_index, 40
         )
         plaintext_stream.seek(0)
 
@@ -407,7 +407,7 @@ class OkdFile:
 
     @staticmethod
     def __read_file_header(
-        stream: io.BufferedReader, file_type: OkdFileType, encryption_key_index: int
+        stream: io.BufferedReader, file_type: OkdFileType, scramble_pattern_index: int
     ):
         if (
             file_type == OkdFileType.OKD
@@ -416,13 +416,13 @@ class OkdFile:
             or file_type == OkdFileType.MP3DIFF
             or file_type == OkdFileType.MMTTXT
         ):
-            return OkdFile.__read_okd_header(stream, encryption_key_index)
+            return OkdFile.__read_okd_header(stream, scramble_pattern_index)
         elif (
             file_type == OkdFileType.M3
             or file_type == OkdFileType.ONTA
             or file_type == OkdFileType.ONTADIFF
         ):
-            return OkdFile.__read_oka_header(stream, encryption_key_index)
+            return OkdFile.__read_oka_header(stream, scramble_pattern_index)
         else:
             raise RuntimeError(f"Invalid file_type. file_type={file_type}")
 
@@ -454,7 +454,7 @@ class OkdFile:
             stream.seek(8 + current_chunk_size, os.SEEK_CUR)
 
     @staticmethod
-    def decrypt(
+    def descramble(
         input_stream: io.BufferedReader,
         chunks_stream: io.BufferedWriter,
         file_type: OkdFileType,
@@ -469,11 +469,11 @@ class OkdFile:
 
         start_position = input_stream.tell()
 
-        encryption_key_index = OkdFile.__detect_first_encryption_key_index(
+        scramble_pattern_index = OkdFile.__detect_first_scramble_pattern_index(
             input_stream, file_type
         )
         header = OkdFile.__read_file_header(
-            input_stream, file_type, encryption_key_index
+            input_stream, file_type, scramble_pattern_index
         )
 
         data_offset = input_stream.tell() - start_position
@@ -495,11 +495,11 @@ class OkdFile:
         else:
             extended_data_length = data_length - extended_data_offset
 
-        encrypted_length = data_length - extended_data_length
+        scrambleed_length = data_length - extended_data_length
 
-        # Decrypt
-        OkdFile.__decrypt(
-            input_stream, chunks_stream, encryption_key_index, encrypted_length
+        # Descramble
+        OkdFile.__descramble(
+            input_stream, chunks_stream, scramble_pattern_index, scrambleed_length
         )
         # Copy extended data
         chunks_stream.write(input_stream.read())
@@ -570,7 +570,7 @@ class OkdFile:
 
     @staticmethod
     def __write_okd_header(
-        stream: io.BufferedWriter, header: OkdHeader, encryption_key_index: int
+        stream: io.BufferedWriter, header: OkdHeader, scramble_pattern_index: int
     ):
         plaintext_stream = io.BytesIO()
         plaintext_stream.write(header.magic_bytes)
@@ -585,8 +585,8 @@ class OkdFile:
         plaintext_length = plaintext_stream.tell()
 
         plaintext_stream.seek(0)
-        OkdFile.__encrypt(
-            plaintext_stream, stream, encryption_key_index, plaintext_length
+        OkdFile.__scramble(
+            plaintext_stream, stream, scramble_pattern_index, plaintext_length
         )
 
     @staticmethod
@@ -626,7 +626,7 @@ class OkdFile:
         stream.write(chunk_data_buffer)
 
     @staticmethod
-    def encrypt(stream: io.BufferedWriter, chunks: list[OkdChunk]):
+    def scramble(stream: io.BufferedWriter, chunks: list[OkdChunk]):
         chunks_stream = io.BytesIO()
         for chunk in chunks:
             OkdFile.__write_chunk(chunks_stream, chunk)
@@ -636,14 +636,14 @@ class OkdFile:
         chunks_stream_length = chunks_stream.getbuffer().nbytes
         length = 32 + chunks_stream_length
         header = GenericOkdHeader(
-            b"YKS1", length, b"YKS-1   v6.0v110", 900001, 0, 1, b""
+            b"YKS1", length, b"YKS-1   v6.0v110", 0, 0, 1, b""
         )
 
-        encryption_key_index = OkdFile.__choose_encryption_key_index()
+        scramble_pattern_index = OkdFile.__choose_scramble_pattern_index()
 
-        OkdFile.__write_okd_header(stream, header, encryption_key_index)
+        OkdFile.__write_okd_header(stream, header, scramble_pattern_index)
 
         chunks_stream.seek(0)
-        OkdFile.__encrypt(
-            chunks_stream, stream, encryption_key_index, chunks_stream_length
+        OkdFile.__scramble(
+            chunks_stream, stream, scramble_pattern_index, chunks_stream_length
         )

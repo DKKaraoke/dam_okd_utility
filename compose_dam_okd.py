@@ -176,7 +176,7 @@ class DamOkdComposer:
             p_track_chunks
         )
 
-        OkdFile.encrypt(
+        OkdFile.scramble(
             main_output_stream, [p_track_info_chunk, m_track_chunk, *p_track_chunks]
         )
 
@@ -206,7 +206,7 @@ class DamOkdComposer:
             p3_track_chunk
         )
 
-        OkdFile.encrypt(
+        OkdFile.scramble(
             scoring_reference_output_stream, [p3_track_info_chunk, p3_track_chunk]
         )
 

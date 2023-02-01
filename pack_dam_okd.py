@@ -70,7 +70,7 @@ class DamOkdPacker:
             else:
                 chunks.append(chunk)
 
-        OkdFile.encrypt(output_stream, chunks)
+        OkdFile.scramble(output_stream, chunks)
 
 
 def main(argv=None):
