@@ -162,7 +162,7 @@ class DamOkdDumper:
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="DAM OKD Extractor")
+    parser = argparse.ArgumentParser(description="DAM OKD Dumper")
     parser.add_argument("input_path", help="Input DAM OKD file path")
     parser.add_argument("output_path", help="Output directory path")
     args = parser.parse_args()
