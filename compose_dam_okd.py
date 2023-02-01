@@ -212,7 +212,7 @@ class DamOkdComposer:
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="DAM OKD Creator")
+    parser = argparse.ArgumentParser(description="DAM OKD Composer")
     parser.add_argument("karaoke_path", help="Karaoke MIDI file path")
     parser.add_argument("main_output_path", help="Output Main file path")
     parser.add_argument(
