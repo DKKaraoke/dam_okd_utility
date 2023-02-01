@@ -18,7 +18,7 @@ This software reads and writes DAM Karaoke machines compatible Karaoke music dat
 
 ### Dump
 
-Dump the contents of Karaoke music data.
+Dump the contents of a Karaoke music data.
 
 ```
 $ python dump_dam_okd.py --help
@@ -36,7 +36,7 @@ options:
 
 ### Compose
 
-Compose Karaoke music data from MIDI form files
+Compose a Karaoke music data from a MIDI file.
 
 ```
 $ python compose_dam_okd.py --help
@@ -56,7 +56,7 @@ options:
 
 ### Pack
 
-Pack Karaoke music data by directly inputting the required data in each chunk.
+Pack a Karaoke music data by directly inputting the required data in each chunk.
 
 ```
 $ python pack_dam_okd.py --help
