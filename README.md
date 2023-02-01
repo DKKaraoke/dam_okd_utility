@@ -89,6 +89,8 @@ The note map in MIDI for compose is as follows.
 - Hook section: C3
 - Two-chorus fadeout position: C5 (Note on alone is sufficient)
 
+Please check [the test data](test/data/p_track.mid).
+
 ## List of verified DAM Karaoke machine
 
 - DAM-XG8000[R] (LIVE DAM Ai[R])
@@ -99,7 +101,7 @@ The note map in MIDI for compose is as follows.
 
 ## Thanks
 
-- [Nurupo](https://github.com/gta191977649) - Author of the MIDI file ["This is an Attack"](https://github.com/gta191977649/midi_godekisenda) from which the [test data](test/data/p_track.mid) was derived
+- [Nurupo](https://github.com/gta191977649) - Author of the MIDI file ["This is an Attack"](https://github.com/gta191977649/midi_godekisenda) from which [the test data](test/data/p_track.mid) was derived
 
 ## License
 
