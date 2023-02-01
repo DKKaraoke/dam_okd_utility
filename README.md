@@ -2,6 +2,8 @@
 
 ## !! Important notes !!
 
+This software is developed for technical research on DAM Karaoke machines.
+
 The Karaoke music data normally recorded on DAM Karaoke machines is protected by copyright. You must handle it in accordance with your local laws and regulations.
 
 ## [Demonstration video](https://twitter.com/soltia48/status/1620095004374093824)
@@ -69,6 +71,23 @@ positional arguments:
 options:
   -h, --help   show this help message and exit
 ```
+
+## How to craete MIDI data for compose
+
+### MIDI port and track map
+
+- Port 0, Track 0-15: Instrumental
+- Port 1, Track 0-7,9-15: Instrumental
+- Port 1, Track 8: Guide melody
+- Port 15:, First valid track: M-Track
+
+### M-Track
+
+M(ark)-Track includes list of hook section, two-chorus fadeout position and others.
+The note map in MIDI for compose is as follows.
+
+- Hook section: C3
+- Two-chorus fadeout position: C5 (Note on alone is sufficient)
 
 ## List of verified DAM Karaoke machine
 
