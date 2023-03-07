@@ -71,8 +71,12 @@ class OkdPTrackChunk(NamedTuple):
             status_byte = message.data[0]
             status_type = status_byte & 0xF0
 
-            if general_midi and status_type == 0xF0:
-                continue
+            if general_midi:
+                if status_type == 0xF0:
+                    continue
+            else:
+                if status_type == 0xF0 and status_byte != 0xF0:
+                    continue
 
             try:
                 mido.messages.specs.SPEC_BY_STATUS[status_byte]
