@@ -81,9 +81,13 @@ options:
 - Port 1, Track 8: Guide melody
 - Port 15:, First valid track: M-Track
 
+### P-Track
+
+P(laying)-Track is performance data of the music.
+
 ### M-Track
 
-M(ark)-Track includes list of hook section, two-chorus fadeout position and others.
+M(arking)-Track includes list of hook section, two-chorus fadeout position and others.
 The note map in MIDI for compose is as follows.
 
 - Hook section: C3
