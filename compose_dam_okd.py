@@ -132,7 +132,7 @@ class DamOkdComposer:
                     )
                 )
 
-            return OkdExtendedPTrackInfoChunk(p_track_info_entries)
+            return OkdExtendedPTrackInfoChunk(0x00, p_track_info_entries)
 
     @staticmethod
     def __p3_track_info_chunk_from_p3_track_chunk(p_track_chunk: OkdPTrackChunk):
